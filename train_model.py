@@ -5,7 +5,7 @@ import time
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, classification_report
 
 try:
@@ -56,9 +56,11 @@ def train_classifier(X_train, X_test, y_train, y_test, model_name):
     X_train_vec = vectorizer.fit_transform(X_train)
     X_test_vec = vectorizer.transform(X_test)
     
-    # 2. Huấn luyện mô hình Logistic Regression
-    # C=1.0 là tham số điều hòa chuẩn, max_iter=200 để đảm bảo hội tụ
-    model = LogisticRegression(max_iter=200, n_jobs=-1)
+    # 2. Huấn luyện mô hình Deep Learning (Multi-Layer Perceptron Neural Network)
+    # hidden_layer_sizes=(64, 32): 2 hidden layers (first with 64 neurons, second with 32 neurons)
+    # activation='relu': ReLU activation function (standard for deep networks)
+    # early_stopping=False: disabled to avoid type-coercion bugs in sklearn string label validation accuracy scoring
+    model = MLPClassifier(hidden_layer_sizes=(64, 32), activation='relu', solver='adam', max_iter=8, early_stopping=False, random_state=42)
     model.fit(X_train_vec, y_train)
     
     duration = time.time() - start_time

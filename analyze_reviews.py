@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import joblib
+from transformers import pipeline
 
 try:
     sys.stdout.reconfigure(encoding='utf-8')
@@ -71,20 +72,38 @@ class ABSAAnalyzer:
         try:
             self.cat_vectorizer = joblib.load(os.path.join(self.models_dir, "category_vectorizer.pkl"))
             self.cat_model = joblib.load(os.path.join(self.models_dir, "category_model.pkl"))
-            self.sent_vectorizer = joblib.load(os.path.join(self.models_dir, "sentiment_vectorizer.pkl"))
-            self.sent_model = joblib.load(os.path.join(self.models_dir, "sentiment_model.pkl"))
+            
+            # Deep Learning PhoBERT transformer pipeline for sentiment classification
+            self.nlp_sentiment = pipeline("sentiment-analysis", model="wonrax/phobert-base-vietnamese-sentiment")
         except Exception as e:
             print(f"Lỗi khi tải mô hình: {e}")
-            print("Vui lòng chắc chắn rằng bạn đã chạy train_model.py thành công.")
+            print("Vui lòng chắc chắn rằng bạn đã chạy train_model.py thành công và cài đặt đầy đủ các thư viện.")
             sys.exit(1)
             
+    def predict_sentiment(self, text):
+        try:
+            if not text or not text.strip():
+                return "neutral"
+            res = self.nlp_sentiment(text)[0]
+            label = res["label"].upper()
+            
+            if "POS" in label:
+                return "positive"
+            elif "NEG" in label:
+                return "negative"
+            else:
+                return "neutral"
+        except Exception as e:
+            print(f"Lỗi khi dự đoán cảm xúc với PhoBERT: {e}", file=sys.stderr)
+            return "neutral"
+
     def analyze_comment(self, comment):
         # 1. Dự đoán category và sentiment cho toàn bộ bình luận
         cat_vec = self.cat_vectorizer.transform([comment])
-        sent_vec = self.sent_vectorizer.transform([comment])
-        
         predicted_cat = self.cat_model.predict(cat_vec)[0]
-        predicted_sent = self.sent_model.predict(sent_vec)[0]
+        
+        # Dự đoán cảm xúc bằng mô hình học sâu PhoBERT
+        predicted_sent = self.predict_sentiment(comment)
         
         # 2. Phân tích khía cạnh (ABSA) bằng cách tách câu
         sentences = split_into_sentences(comment)
@@ -93,9 +112,8 @@ class ABSAAnalyzer:
         for sent in sentences:
             aspect = get_aspect(sent)
             if aspect:
-                # Dự đoán sentiment của từng câu khía cạnh riêng lẻ
-                sent_vec_s = self.sent_vectorizer.transform([sent])
-                sent_sentiment = self.sent_model.predict(sent_vec_s)[0]
+                # Dự đoán sentiment của từng câu khía cạnh riêng lẻ bằng PhoBERT
+                sent_sentiment = self.predict_sentiment(sent)
                 aspect_analyses.append({
                     "sentence": sent,
                     "aspect": aspect,
