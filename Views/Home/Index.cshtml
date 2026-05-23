@@ -1172,26 +1172,34 @@
         track.insertAdjacentHTML('afterbegin', html);
     }
 
-    // ── Xử lý Thu nhỏ/Mở rộng Sidebar trên Mobile ──
+    // ── Xử lý Thu nhỏ/Mở rộng Sidebar (Ngang trên PC/Dọc trên Mobile) ──
     function initMobileSidebarToggle() {
         var toggleBtn = document.getElementById('toggle-sidebar-btn');
         var sidebar = document.querySelector('.map-sidebar');
         var mapLayout = document.querySelector('.map-layout');
         
         if (toggleBtn && sidebar && mapLayout) {
+            // Thiết lập icon ban đầu dựa trên kích thước màn hình
+            var icon = toggleBtn.querySelector('.toggle-icon');
+            var isMobile = window.innerWidth <= 768;
+            if (icon) {
+                icon.textContent = isMobile ? '▼' : '◀';
+            }
+            
             toggleBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 var isCollapsed = sidebar.classList.toggle('collapsed');
                 mapLayout.classList.toggle('sidebar-collapsed', isCollapsed);
                 
+                var isMobileNow = window.innerWidth <= 768;
                 var icon = toggleBtn.querySelector('.toggle-icon');
                 if (isCollapsed) {
-                    icon.textContent = '▲'; // Nhấn để mở rộng
+                    icon.textContent = isMobileNow ? '▲' : '▶'; // Nhấn để mở rộng
                     if (typeof showToast === 'function') {
-                        showToast('Đã thu nhỏ thanh tìm kiếm. Bạn có thể xem bản đồ rộng hơn!', 'info');
+                        showToast(isMobileNow ? 'Đã thu nhỏ thanh tìm kiếm. Bạn có thể xem bản đồ rộng hơn!' : 'Đã thu gọn thanh tìm kiếm sang trái!', 'info');
                     }
                 } else {
-                    icon.textContent = '▼'; // Nhấn để thu nhỏ
+                    icon.textContent = isMobileNow ? '▼' : '◀'; // Nhấn để thu nhỏ
                 }
                 
                 // Cập nhật lại kích thước bản đồ Leaflet sau khi co giãn
@@ -1200,6 +1208,20 @@
                         map.invalidateSize({ animate: true });
                     }
                 }, 300);
+            });
+            
+            // Đồng bộ hoá icon khi người dùng co giãn trình duyệt
+            window.addEventListener('resize', function() {
+                var isMobileNow = window.innerWidth <= 768;
+                var isCollapsed = sidebar.classList.contains('collapsed');
+                var icon = toggleBtn.querySelector('.toggle-icon');
+                if (icon) {
+                    if (isCollapsed) {
+                        icon.textContent = isMobileNow ? '▲' : '▶';
+                    } else {
+                        icon.textContent = isMobileNow ? '▼' : '◀';
+                    }
+                }
             });
         }
     }

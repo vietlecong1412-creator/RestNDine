@@ -3714,27 +3714,68 @@ footer.site-footer {
 
 /* ── Collapse / Expand Sidebar Toggle Button ── */
 .btn-toggle-sidebar {
-  display: none; /* Hidden on desktop */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  right: -18px; /* Float just outside the right border of the sidebar */
+  top: 24px;
+  z-index: 1020;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark-theme .btn-toggle-sidebar {
+  background: var(--bg-sidebar);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.btn-toggle-sidebar:hover {
+  background: var(--bg-card);
+  color: var(--primary);
+  transform: scale(1.08);
+}
+
+.btn-toggle-sidebar .toggle-icon {
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+/* Desktop collapsed sidebar styles (screen width > 768px) */
+@media (min-width: 769px) {
+  .map-sidebar.collapsed {
+    transform: translateX(-100%) translateX(-16px); /* Slide left out of view */
+    box-shadow: none;
+  }
+  
+  .map-sidebar.collapsed .btn-toggle-sidebar {
+    right: -42px; /* Floating at the left edge of the viewport */
+    border-radius: 0 50% 50% 0; /* Semi-circle floating on the screen edge */
+    border-left: 1px solid var(--border);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+  }
 }
 
 @media (max-width: 768px) {
   .btn-toggle-sidebar {
     display: flex !important;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid var(--border);
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: absolute;
-    right: 1.25rem;
-    top: 1.25rem;
-    z-index: 1010;
-    box-shadow: var(--shadow-sm);
+    right: 1.25rem !important;
+    top: 1.25rem !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    transform: none !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
   }
   .dark-theme .btn-toggle-sidebar {
     background: rgba(15, 23, 42, 0.85);
@@ -3758,6 +3799,7 @@ footer.site-footer {
   /* Collapsed sidebar mobile behaviors */
   .map-sidebar.collapsed {
     height: 62px !important;
+    transform: none !important; /* Do NOT slide left on mobile */
     overflow: hidden !important;
   }
   .map-sidebar.collapsed .map-search-wrapper,
