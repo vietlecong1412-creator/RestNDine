@@ -22,7 +22,8 @@ namespace DACS.Areas.Admin.Controllers
 
         public async Task<IActionResult> Index()
         {
-            return View(await _repo.GetAllAsync());
+            var all = await _repo.GetAllAsync();
+            return View(all.OrderByDescending(r => r.Id).ToList());
         }
 
         public IActionResult Create()
@@ -82,7 +83,10 @@ namespace DACS.Areas.Admin.Controllers
         public async Task<IActionResult> BannerRequests()
         {
             var all = await _repo.GetAllAsync();
-            var pending = all.Where(r => r.BannerStatus == DACS.Models.BannerStatus.PendingPayment).ToList();
+            var pending = all
+                .Where(r => r.BannerStatus == DACS.Models.BannerStatus.PendingPayment)
+                .OrderByDescending(r => r.Id)
+                .ToList();
             return View(pending);
         }
 
