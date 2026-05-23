@@ -1,0 +1,8 @@
+bin/
+obj/
+comments_dataset.csv
+.git/
+.vs/
+.vscode/
+*.user
+appsettings.Development.json

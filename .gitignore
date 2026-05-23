@@ -1,0 +1,28 @@
+# ==========================================
+# ASP.NET Core (.NET) Ignores
+# ==========================================
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+appsettings.Development.json
+*.db
+*.db-journal
+
+# ==========================================
+# Python Ignores
+# ==========================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+env/
+venv/
+.env
+
+# ==========================================
+# Data & Large Files
+# ==========================================
+comments_dataset.csv

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="FoodRadar — Bản đồ quán ăn tại định vị. Tìm kiếm nhà hàng, quán ăn gần bạn dễ dàng." />
+    <title>@ViewData["Title"] - FoodRadar 📡</title>
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('site-theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/DACS.styles.css" asp-append-version="true" />
+</head>
+<body>
+
+<header>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid" style="max-width:1280px; margin:0 auto; padding:0 1.5rem;">
+
+            @* Brand *@
+            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                📡 FoodRadar
+            </a>
+
+            <button class="navbar-toggler" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#mainNav"
+                    aria-controls="mainNav" aria-expanded="false" aria-label="Menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNav">
+                @* Left nav *@
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0" style="gap:.25rem;">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")"
+                           asp-area="" asp-controller="Home" asp-action="Index">
+                            🗺 Bản đồ
+                        </a>
+                    </li>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
+                               asp-area="Admin" asp-controller="Restaurant" asp-action="Index">
+                                ⚙️ Quản lý
+                                <span class="badge-admin">Admin</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "BannerRequests" ? "active" : "")"
+                               asp-area="Admin" asp-controller="Restaurant" asp-action="BannerRequests">
+                                🧾 Duyệt Banner
+                            </a>
+                        </li>
+                    }
+                    @if (User.IsInRole("Owner") || User.IsInRole("Admin"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
+                               asp-area="" asp-controller="Restaurant" asp-action="Create">
+                                🍴 Thêm nhà hàng
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Hotel" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
+                               asp-area="" asp-controller="Hotel" asp-action="Create">
+                                🏨 Thêm khách sạn
+                            </a>
+                        </li>
+                        @if (User.IsInRole("Owner"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "MyRestaurants" ? "active" : "")"
+                                   asp-area="" asp-controller="Restaurant" asp-action="MyRestaurants">
+                                    📋 Quán của tôi
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Hotel" && ViewContext.RouteData.Values["action"]?.ToString() == "MyHotels" ? "active" : "")"
+                                   asp-area="" asp-controller="Hotel" asp-action="MyHotels">
+                                    📋 Khách sạn của tôi
+                                </a>
+                            </li>
+                        }
+                    }
+                </ul>
+
+                @* Right: auth *@
+                <div class="d-flex align-items-center gap-2">
+                    <button id="theme-toggle" class="theme-toggle-btn" title="Chuyển chế độ sáng/tối" aria-label="Toggle Theme">
+                        <!-- Sun Icon -->
+                        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                        </svg>
+                        <!-- Moon Icon -->
+                        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+                        </svg>
+                    </button>
+                    <partial name="_LoginPartial" />
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<div class="page-container">
+    @RenderBody()
+</div>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div style="display:flex; align-items:center; gap:.5rem;">
+            <span class="footer-brand">📡 FoodRadar</span>
+            <span style="color:var(--border)">|</span>
+            <span>&copy; 2026 — Bản đồ quán ăn</span>
+        </div>
+        <div class="footer-links">
+            <a asp-area="" asp-controller="Home" asp-action="Privacy">Chính sách</a>
+            <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a>
+        </div>
+    </div>
+</footer>
+
+@* Toast container *@
+<div id="toast-container"></div>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+
+<script>
+    window.showToast = function(msg, type) {
+        type = type || 'info';
+        const icons = { success:'✅', info:'ℹ️', warning:'⚠️', error:'❌' };
+        const el = document.createElement('div');
+        el.className = 'toast-item ' + type;
+        el.innerHTML = '<span class="toast-icon">' + (icons[type]||'ℹ️') + '</span><span>' + msg + '</span>';
+        document.getElementById('toast-container').appendChild(el);
+        setTimeout(function() {
+            el.style.opacity = '0';
+            el.style.transform = 'translateX(20px)';
+            el.style.transition = 'all .3s ease';
+            setTimeout(function() { el.remove(); }, 300);
+        }, 3000);
+    };
+
+    // Unified Theme Switcher
+    (function () {
+        const toggleBtn = document.getElementById('theme-toggle');
+        if (!toggleBtn) return;
+        
+        const sunIcon = toggleBtn.querySelector('.sun-icon');
+        const moonIcon = toggleBtn.querySelector('.moon-icon');
+        
+        function updateToggleIcons(isDark) {
+            if (isDark) {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        let isDark = document.documentElement.classList.contains('dark-theme');
+        updateToggleIcons(isDark);
+
+        toggleBtn.addEventListener('click', function () {
+            isDark = !isDark;
+            if (isDark) {
+                document.documentElement.classList.add('dark-theme');
+                document.body.classList.add('dark-theme');
+                localStorage.setItem('site-theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark-theme');
+                document.body.classList.remove('dark-theme');
+                localStorage.setItem('site-theme', 'light');
+            }
+            updateToggleIcons(isDark);
+
+            // Notify maps to synchronize
+            window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: isDark ? 'dark' : 'light' } }));
+        });
+        
+        // Sync back if map selector switches it
+        window.addEventListener('map-theme-changed', function(e) {
+            const mapTheme = e.detail.theme;
+            isDark = (mapTheme === 'dark');
+            if (isDark) {
+                document.documentElement.classList.add('dark-theme');
+                document.body.classList.add('dark-theme');
+                localStorage.setItem('site-theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark-theme');
+                document.body.classList.remove('dark-theme');
+                localStorage.setItem('site-theme', 'light');
+            }
+            updateToggleIcons(isDark);
+        });
+    })();
+
+    @if (TempData["Success"] != null)
+    {
+        <text>showToast("@TempData["Success"]", "success");</text>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <text>showToast("@TempData["Error"]", "error");</text>
+    }
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+

@@ -1,0 +1,114 @@
+@model IEnumerable<DACS.Models.Restaurant>
+@{
+    ViewData["Title"] = "Quản lý quán ăn của tôi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="admin-container animate-in">
+    <div class="section-header">
+        <h1 class="section-title">
+            <span class="icon">📋</span> Quản lý quán ăn của tôi
+        </h1>
+        <a asp-action="Create" asp-controller="Restaurant" class="btn-primary-custom">
+            ➕ Thêm quán mới
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert-glass success mb-4">
+            ✅ @TempData["Success"]
+        </div>
+    }
+
+    <div class="card-glass p-0">
+        @if (!Model.Any())
+        {
+            <div class="p-5 text-center">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🍽️</div>
+                <h4 style="color: var(--text-primary)">Bạn chưa đăng ký quán ăn nào</h4>
+                <p style="color: var(--text-secondary)">Hãy thêm quán ăn đầu tiên của bạn để chia sẻ với cộng đồng.</p>
+                <a asp-action="Create" asp-controller="Restaurant" class="btn-primary-custom mt-2">
+                    Bắt đầu thêm quán
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Tên quán</th>
+                            <th>Địa chỉ</th>
+                            <th>Banner (Deal Hời)</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold" style="color: var(--text-primary)">
+                                    <div class="d-flex align-items-center gap-2">
+                                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                        {
+                                            <img src="@item.ImageUrl" style="width:40px;height:40px;border-radius:8px;object-fit:cover;" />
+                                        }
+                                        else
+                                        {
+                                            <div style="width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🍴</div>
+                                        }
+                                        @item.Name
+                                    </div>
+                                </td>
+                                <td><span class="text-truncate d-inline-block" style="max-width:200px;" title="@item.Address">@item.Address</span></td>
+                                <td>
+                                    @switch (item.BannerStatus)
+                                    {
+                                        case DACS.Models.BannerStatus.Active:
+                                            <span class="badge" style="background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3);">✅ Đang chạy</span>
+                                            break;
+                                        case DACS.Models.BannerStatus.PendingPayment:
+                                            <span class="badge" style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);">🕒 Chờ duyệt</span>
+                                            break;
+                                        case DACS.Models.BannerStatus.Rejected:
+                                            <span class="badge" style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);">❌ Bị từ chối</span>
+                                            break;
+                                        default:
+                                            <span class="badge" style="background:rgba(255,255,255,.05);color:var(--text-muted);border:1px solid var(--border);">Không có</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.IsApproved)
+                                    {
+                                        <span class="badge" style="background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3);">Đã duyệt</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge" style="background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3);">Chờ duyệt</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn-icon" title="Xem chi tiết">
+                                            👁️
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn-icon text-primary" title="Sửa thông tin">
+                                            ✏️
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn-icon text-danger" title="Xóa quán">
+                                            🗑️
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

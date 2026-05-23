@@ -1,0 +1,117 @@
+@model IEnumerable<DACS.Models.Restaurant>
+@{
+    ViewData["Title"] = "Quản lý quán ăn";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="admin-container animate-in">
+    <div class="section-header">
+        <h1 class="section-title">
+            <span class="icon">📍</span> Quản lý quán ăn
+            <span class="badge-count">@Model.Count() quán</span>
+        </h1>
+        <a asp-action="Create" class="btn-primary-custom">
+            <span>➕</span> Thêm quán mới
+        </a>
+    </div>
+
+    <div class="card-glass">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">🍽</div>
+                <div class="empty-state-title">Chưa có quán ăn nào</div>
+                <div class="empty-state-desc">Hãy thêm quán ăn đầu tiên vào bản đồ</div>
+                <a asp-action="Create" class="btn-primary-custom mt-3">Thêm ngay</a>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table-custom text-nowrap">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên quán</th>
+                            <th>Địa chỉ</th>
+                            <th>Giá</th>
+                            <th>Trạng thái</th>
+                            <th>Tọa độ</th>
+                            <th class="text-end">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model)
+                        {
+                            <tr>
+                                <td style="color:var(--text-muted)">#@r.Id</td>
+                                <td><strong style="color:var(--text-primary)">@r.Name</strong></td>
+                                <td>@(string.IsNullOrEmpty(r.Address) ? "—" : r.Address)</td>
+                                <td><span class="price-badge">@(string.IsNullOrEmpty(r.PriceRange) ? "Chưa có" : r.PriceRange)</span></td>
+                                <td>
+                                    @if (r.IsApproved)
+                                    {
+                                        <span class="badge-success-custom">✅ Đã duyệt</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-warning-custom">🕒 Chờ duyệt</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="coord-badge">
+                                        @r.Latitude.ToString("0.####"), @r.Longitude.ToString("0.####")
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        @if (!r.IsApproved)
+                                        {
+                                            <form asp-action="Approve" method="post" style="display:inline;">
+                                                <input type="hidden" name="id" value="@r.Id" />
+                                                <button type="submit" class="btn-success-custom">
+                                                    ✔️ Duyệt
+                                                </button>
+                                            </form>
+                                        }
+                                        <button onclick="confirmDelete(@r.Id, '@r.Name')" class="btn-danger-custom">
+                                            🗑 Xóa
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@* Modal Xóa *@
+<div id="deleteModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-title">Xác nhận xóa</div>
+        <div class="modal-desc">Bạn có chắc chắn muốn xóa quán "<b id="delName"></b>" không? Hành động này không thể hoàn tác.</div>
+        <div class="modal-actions">
+            <button onclick="closeDelete()" class="btn-outline-custom">Hủy</button>
+            <form id="delForm" method="post" asp-action="Delete">
+                <input type="hidden" name="id" id="delId" />
+                <button type="submit" class="btn-primary-custom" style="background:#ef4444;">Đồng ý xóa</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function confirmDelete(id, name) {
+        document.getElementById('delId').value = id;
+        document.getElementById('delName').textContent = name;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+    function closeDelete() {
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+</script>
+}

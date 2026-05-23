@@ -1,0 +1,1181 @@
+@model DACS.Models.HomeIndexViewModel
+@{
+    ViewData["Title"] = "Bản đồ ẩm thực & khách sạn";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@* Leaflet CSS *@
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="map-layout">
+    @* ── Sidebar ── *@
+    <aside class="map-sidebar">
+        @* ── View 1: List and Search View ── *@
+        <div class="sidebar-view active" id="sidebar-list-view">
+            <div class="map-sidebar-header">
+                <div class="map-sidebar-title">
+                    🗺️ <span>Tìm kiếm địa điểm</span>
+                    <span class="badge-count" id="count-badge">0</span>
+                </div>
+
+                @if (User.IsInRole("Owner") || User.IsInRole("Admin"))
+                {
+                    <div class="d-flex gap-2 mb-3">
+                        <a asp-controller="Restaurant" asp-action="Create" class="btn-primary-custom w-50 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px;">
+                            🍴 Thêm nhà hàng
+                        </a>
+                        <a asp-controller="Hotel" asp-action="Create" class="btn-primary-custom w-50 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border: none;">
+                            🏨 Thêm khách sạn
+                        </a>
+                    </div>
+                }
+
+                <div class="map-search-wrapper">
+                    <div class="map-search">
+                        <span class="map-search-icon">🔍</span>
+                        <input id="search-input" type="text"
+                               placeholder="Tìm kiếm nhà hàng, khách sạn..."
+                               autocomplete="off" />
+                        <button id="clear-search" class="clear-search-btn" style="display:none;" title="Xóa tìm kiếm">✕</button>
+                    </div>
+                </div>
+
+                @* Phân loại địa điểm chips *@
+                <div class="price-chips-container" style="margin-bottom: 0.4rem;">
+                    <div class="price-chips" id="category-chips">
+                        <button class="price-chip active" data-category="all">🗺️ Tất cả</button>
+                        <button class="price-chip" data-category="restaurant">🍴 Nhà hàng</button>
+                        <button class="price-chip" data-category="cafe">☕ Quán Cafe</button>
+                        <button class="price-chip" data-category="hotel">🏨 Khách sạn</button>
+                    </div>
+                </div>
+
+                @* Tầm giá quick chips *@
+                <div class="price-chips-container">
+                    <div class="price-chips" id="price-chips">
+                        <button class="price-chip active" data-price="all">💰 Tất cả giá</button>
+                        <button class="price-chip" data-price="cheap">💸 Giá rẻ</button>
+                        <button class="price-chip" data-price="medium">💸 Vừa phải</button>
+                        <button class="price-chip" data-price="premium">💎 Cao cấp</button>
+                    </div>
+                </div>
+
+                @* Vị trí *@
+                <div class="map-toolbar mt-2">
+                    <button id="btn-my-location" class="btn-location" title="Vị trí hiện tại của tôi">
+                        <span class="location-icon">🎯</span>
+                        <span id="btn-location-text">Vị trí của tôi</span>
+                    </button>
+                    <span id="nearby-badge" class="nearby-badge" style="display:none;">🧭 Ưu tiên gần nhất</span>
+                </div>
+            </div>
+
+            <div class="restaurant-list" id="restaurant-list">
+                @* filled by JS *@
+            </div>
+
+            <div class="map-count-bar">
+                <span>📍</span>
+                <span id="count-text">Đang tải...</span>
+                <span id="user-location-bar" class="user-location-bar" style="display:none;">
+                    &nbsp;·&nbsp;📡 <span id="user-location-coords"></span>
+                </span>
+            </div>
+        </div>
+
+        @* ── View 2: Restaurant Detail View ── *@
+        <div class="sidebar-view" id="sidebar-detail-view" style="display: none;">
+            <div class="sidebar-detail-header">
+                <button id="btn-back-to-list" class="btn-back-list">
+                    <span>←</span> Quay lại kết quả
+                </button>
+            </div>
+            
+            <div class="sidebar-detail-body">
+                <div class="detail-image-container" id="detail-image-container">
+                    <img id="detail-img" src="" alt="Place Image" />
+                    <div class="detail-gradient-overlay"></div>
+                </div>
+                
+                <div class="detail-content-wrap">
+                    <h2 class="detail-name" id="detail-name">Tên địa điểm</h2>
+                    
+                    <div class="detail-quick-meta">
+                        <span class="detail-price-badge" id="detail-price">💰 50k - 100k</span>
+                        <span class="detail-distance-badge" id="detail-distance" style="display:none;">🚶 0.0 km</span>
+                    </div>
+
+                    @* Hotel specific meta *@
+                    <div class="detail-hotel-meta" id="detail-hotel-meta" style="display:none; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                        <span class="detail-star-badge" id="detail-stars" style="color: #eab308; font-weight: bold; font-size: 0.9rem;">⭐⭐⭐⭐⭐</span>
+                        <div class="detail-amenities" id="detail-amenities" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.15rem;">
+                            <!-- filled by JS -->
+                        </div>
+                    </div>
+
+                    <div class="detail-action-buttons">
+                        <button id="btn-directions" class="btn-action-primary">
+                            <span>🧭</span> Chỉ đường
+                        </button>
+                        <a id="btn-call" href="tel:" class="btn-action-outline">
+                            <span>📞</span> Gọi điện
+                        </a>
+                        <a id="btn-full-details" href="" class="btn-action-outline">
+                            <span>📝</span> Chi tiết & Bình luận
+                        </a>
+                    </div>
+
+                    <hr class="detail-divider" />
+
+                    <div class="detail-info-list">
+                        <div class="detail-info-item">
+                            <span class="info-icon">📍</span>
+                            <div class="info-text">
+                                <span class="info-val" id="detail-address">Địa chỉ</span>
+                                <button class="btn-copy-address" id="btn-copy-address" title="Sao chép địa chỉ">📋 Sao chép</button>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-info-item" id="detail-phone-item">
+                            <span class="info-icon">📞</span>
+                            <div class="info-text">
+                                <span class="info-val" id="detail-phone">Số điện thoại</span>
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item">
+                            <span class="info-icon">ℹ️</span>
+                            <div class="info-text">
+                                <span class="info-label" id="detail-desc-label">Mô tả</span>
+                                <span class="info-val desc" id="detail-desc">Mô tả</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    @* ── Map ── *@
+    <div class="map-container">
+        <div id="map"></div>
+        <div class="map-tip">💡 Click vào marker để xem thông tin quán</div>
+        
+        @* Custom Google Maps Style Theme Switcher *@
+        <div class="map-style-selector" id="map-style-selector">
+            <button class="style-btn active" data-style="voyager" title="Bản đồ sáng phong cách Google Maps">🗺️ Sáng</button>
+            <button class="style-btn" data-style="dark" title="Bản đồ tối phong cách Dark Mode">🕶️ Tối</button>
+        </div>
+
+        @* Floating location button on map *@
+        <button id="btn-locate-map" class="btn-locate-map" title="Vị trí hiện tại của tôi">
+            <span>🎯</span>
+        </button>
+
+        @* Deals Carousel Floating Widget (Rendered by JS) *@
+        <div id="dynamic-carousel-container" style="pointer-events:none;"></div>
+    </div>
+</div>
+
+@* ── Gợi ý cho bạn Section ── *@
+<section class="deals-section" id="deals-section" style="display:none;">
+    <div class="deals-section-header">
+        <div class="deals-section-title">
+            ✨ Gợi ý dành cho bạn
+            <span class="deals-nearby-hint" id="deals-nearby-hint" style="display:none;">📍 Ưu tiên gần bạn</span>
+        </div>
+        <span class="deals-count-label" id="deals-count-label"></span>
+    </div>
+    <div class="deals-scroll-track" id="deals-scroll-track">
+        @* Filled by JS *@
+    </div>
+</section>
+
+@section Scripts {
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    // ── Combined Data ──
+    var restaurants = @Html.Raw(Json.Serialize(Model.Restaurants)) || [];
+    restaurants.forEach(function(x) { 
+        x.itemType = 'restaurant'; 
+        x.isCafe = !!x.isCafe; 
+    });
+
+    var hotels = @Html.Raw(Json.Serialize(Model.Hotels)) || [];
+    hotels.forEach(function(x) { x.itemType = 'hotel'; });
+
+    var allPlaces = restaurants.concat(hotels);
+
+    // ── Map init ──
+    var map = L.map('map', { zoomControl: false }).setView([10.852, 106.761], 13);
+    
+    // Zoom control in bottom right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // ── Map Tile Layers ──
+    var voyagerTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 20
+    }).addTo(map);
+
+    var darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 20
+    });
+
+    // ── Synchronized Map Theme Selector Event ──
+    function setMapStyle(style, dispatchEvent) {
+        var layout = document.querySelector('.map-layout');
+        map.removeLayer(voyagerTiles);
+        map.removeLayer(darkTiles);
+        
+        var btn = document.querySelector('.style-btn[data-style="' + style + '"]');
+        if (btn) {
+            document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        
+        if (style === 'voyager') {
+            voyagerTiles.addTo(map);
+            if (layout) layout.classList.remove('dark-theme');
+            document.body.classList.remove('dark-theme');
+            if (dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('map-theme-changed', { detail: { theme: 'light' } }));
+            }
+        } else if (style === 'dark') {
+            darkTiles.addTo(map);
+            if (layout) layout.classList.add('dark-theme');
+            document.body.classList.add('dark-theme');
+            if (dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('map-theme-changed', { detail: { theme: 'dark' } }));
+            }
+        }
+    }
+
+    document.getElementById('map-style-selector').addEventListener('click', function(e) {
+        var btn = e.target.closest('.style-btn');
+        if (!btn) return;
+        setMapStyle(btn.dataset.style, true);
+    });
+
+    // Listen to unified theme change event from Navbar
+    window.addEventListener('theme-changed', function (e) {
+        setMapStyle(e.detail.theme === 'dark' ? 'dark' : 'voyager', false);
+    });
+
+    // Sync initial theme
+    var initialTheme = document.documentElement.classList.contains('dark-theme') ? 'dark' : 'voyager';
+    if (initialTheme === 'dark') {
+        setTimeout(function() {
+            setMapStyle('dark', false);
+        }, 150);
+    }
+
+    // ── Leaflet custom markers ──
+    function makeIcon(r, active) {
+        var isHotel = (r.itemType === 'hotel');
+        var isCafe = (r.itemType === 'restaurant' && r.isCafe);
+        var color;
+        var emoji;
+        if (isHotel) {
+            color = active ? '#eab308' : '#2563eb'; // Gold active, Blue standard for Hotel
+            emoji = '🏨';
+        } else if (isCafe) {
+            color = active ? '#eab308' : '#854d0e'; // Gold active, Coffee Brown standard for Cafe
+            emoji = '☕';
+        } else {
+            color = active ? '#eab308' : '#ef4444'; // Gold active, Red standard for Restaurant
+            emoji = '🍴';
+        }
+        
+        var htmlStr = '<div class="g-marker-container' + (active ? ' g-active' : '') + '">' +
+            '<svg class="g-marker-svg" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">' +
+                '<path fill="' + color + '" stroke="#fff" stroke-width="1.5" d="M16 2C8.8 2 3 7.8 3 15c0 9.7 12 24.3 12.5 24.9.3.4.7.6 1 .6.4 0 .7-.2 1-.6C18 39.3 30 24.7 30 15c0-7.2-5.8-13-13-13z"/>' +
+                '<circle fill="#fff" cx="16" cy="15" r="7.5"/>' +
+            '</svg>' +
+            '<span class="g-marker-emoji">' + emoji + '</span>' +
+            '</div>';
+            
+        return L.divIcon({
+            className: '',
+            html: htmlStr,
+            iconSize: [34, 44], iconAnchor: [17, 44], popupAnchor: [0, -40]
+        });
+    }
+
+    // ── State ──
+    var markers         = [];
+    var activeIdx       = -1;
+    var userLatLng      = null;
+    var userMarker      = null;
+    var userAccuracyCircle = null;
+    var activeCategoryFilter = 'all'; // 'all' | 'restaurant' | 'hotel'
+    var activePriceFilter = 'all';   // 'all' | 'cheap' | 'medium' | 'premium'
+    var currentRouteLine = null;
+    var currentRouteAnimMarker = null;
+
+    // ── Haversine distance (km) ──
+    function calcDistance(lat1, lon1, lat2, lon2) {
+        var R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+        var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+                Math.sin(dLon/2)*Math.sin(dLon/2);
+        return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    }
+    function formatDistance(km) {
+        return km < 1 ? Math.round(km*1000)+' m' : km.toFixed(1)+' km';
+    }
+
+    // ── Price filter logic ──
+    function extractPriceNums(str) {
+        if (!str) return null;
+        // Clean thousand separators (dots) first
+        var cleanStr = str.replace(/\./g, '');
+        var nums = cleanStr.match(/\d+/g);
+        if (!nums || nums.length === 0) return null;
+        var arr = nums.map(function(numStr) {
+            var val = Number(numStr);
+            // Support "k" format (e.g. 50k -> 50000)
+            if (str.toLowerCase().includes('k') && val < 1000) {
+                val = val * 1000;
+            }
+            // Support "triệu" / "tr" format (e.g. 1.5tr -> 1500000)
+            if ((str.toLowerCase().includes('triệu') || str.toLowerCase().includes('tr')) && val < 1000) {
+                val = val * 1000000;
+            }
+            return val;
+        });
+        return { min: Math.min.apply(null, arr), max: Math.max.apply(null, arr) };
+    }
+    function matchPrice(r, filter) {
+        if (filter === 'all') return true;
+        var raw = (r.priceRange || '').toLowerCase();
+        var p   = extractPriceNums(r.priceRange);
+
+        // ── KHÁCH SẠN ──
+        // Giá rẻ:   min <= 2.000.000đ/đêm  (Liberty Central 1.5M, Grand Saigon 1.5M, Rex 1.8M)
+        // Vừa phải: min <= 3.000.000đ/đêm  (Pullman 2.2M, Majestic 2M, New World 2.6M, Sheraton 2.8M)
+        // Cao cấp:  max >= 2.500.000đ/đêm  (gần như tất cả khách sạn đều có giá cao nhất > 2.5M)
+        if (r.itemType === 'hotel') {
+            if (p === null) return filter === 'all';
+            if (filter === 'cheap')   return p.min <= 2000000;
+            if (filter === 'medium')  return p.min <= 3000000;
+            if (filter === 'premium') return p.max >= 2500000;
+        }
+
+        // ── QUÁN CAFE / TRÀ SỮA ──
+        // Giá rẻ:   max <= 40.000đ
+        // Vừa phải: max <= 70.000đ  (Highlands 69k, Đen Đá 70k, Mockingbird 85k)
+        // Cao cấp:  max >= 60.000đ  (Cộng Cà Phê 80k, Phúc Long 80k, Katinat 90k, Workshop 130k, ...)
+        if (r.itemType === 'restaurant' && r.isCafe) {
+            if (p === null) return filter === 'all';
+            if (filter === 'cheap')   return p.max <= 40000;
+            if (filter === 'medium')  return p.max > 40000 && p.max <= 70000;
+            if (filter === 'premium') return p.max >= 60000;
+        }
+
+        // ── NHÀ HÀNG / QUÁN ĂN ──
+        // Giá rẻ:   max <= 80.000đ  (Bánh Mì Huỳnh Hoa 85k → vừa phải)
+        // Vừa phải: max <= 130.000đ (Phở Lệ 100k ✓)
+        // Cao cấp:  max >= 100.000đ (Phở Lệ 100k, Propaganda 180k, mọi bistro/restaurant đều vào)
+        if (p === null) return filter === 'all';
+        if (filter === 'cheap')   return p.max <= 80000;
+        if (filter === 'medium')  return p.max > 80000 && p.max <= 130000;
+        if (filter === 'premium') return p.max >= 100000;
+
+        return true;
+    }
+
+    // ── Build popup HTML ──
+    function buildPopup(r) {
+        var desc  = r.description ? '<div class="popup-desc">'+r.description+'</div>' : '';
+        var price = r.priceRange  ? '<div class="popup-price">💰 '+r.priceRange+'</div>' : '';
+        var distHtml = '';
+        if (userLatLng && r.latitude && r.longitude) {
+            distHtml = '<div class="popup-dist">🚶 '+
+                formatDistance(calcDistance(userLatLng.lat,userLatLng.lng,r.latitude,r.longitude))+
+                ' từ bạn</div>';
+        }
+        var typeLabel;
+        var typeStyle;
+        if (r.itemType === 'hotel') {
+            typeLabel = '🏨 Khách sạn';
+            typeStyle = 'color:#2563eb';
+        } else if (r.isCafe) {
+            typeLabel = '☕ Quán Cafe';
+            typeStyle = 'color:#854d0e';
+        } else {
+            typeLabel = '🍴 Nhà hàng';
+            typeStyle = 'color:#ef4444';
+        }
+        
+        return '<div class="popup-card">'+
+               '<div class="popup-type" style="font-size: 0.7rem; font-weight: 700; ' + typeStyle + '; margin-bottom: 2px;">' + typeLabel + '</div>'+
+               '<div class="popup-name">'+r.name+'</div>'+
+               '<div class="popup-addr">📍 '+(r.address||'Chưa có địa chỉ')+'</div>'+
+               price+distHtml+desc+
+               '<button class="btn-popup-more mt-2 w-100" onclick="window.triggerDetailView(' + allPlaces.indexOf(r) + ')">Xem chi tiết ở sidebar</button>'+
+               '</div>';
+    }
+
+    // ── Build sidebar card HTML ──
+    function buildCard(r, i) {
+        var priceTag  = r.priceRange ? '<span class="card-price-tag">'+r.priceRange+'</span>' : '';
+        var distBadge = '';
+        if (userLatLng && r.latitude && r.longitude) {
+            distBadge = '<span class="card-dist-badge">🚶 '+
+                formatDistance(calcDistance(userLatLng.lat,userLatLng.lng,r.latitude,r.longitude))+
+                '</span>';
+        }
+        
+        var tagColor, tagEmoji;
+        if (r.itemType === 'hotel') {
+            tagColor = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
+            tagEmoji = '🏨 Khách sạn';
+        } else if (r.isCafe) {
+            tagColor = 'linear-gradient(135deg, #854d0e, #a16207)';
+            tagEmoji = '☕ Quán Cafe';
+        } else {
+            tagColor = 'linear-gradient(135deg, #ef4444, #dc2626)';
+            tagEmoji = '🍴 Nhà hàng';
+        }
+        var typeBadge = '<span class="badge" style="background: ' + tagColor + '; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; margin-right: 4px;">' + tagEmoji + '</span>';
+        
+        var fallbackImg = r.itemType === 'hotel' ? 
+            'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=150' : 
+            (r.isCafe ? 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=150' : 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150');
+
+        return '<div class="restaurant-item" id="item-'+i+'" data-idx="'+i+'">'+
+               '<div class="restaurant-item-img">'+
+               '    <img src="'+ (r.imageUrl || fallbackImg) +'" alt="place thumb" />'+
+               '</div>'+
+               '<div class="restaurant-item-info">'+
+               '    <div class="restaurant-item-name">'+r.name+'</div>'+
+               '    <div class="restaurant-item-meta">'+
+               '        ' + typeBadge + priceTag + distBadge +
+               '    </div>'+
+               '    <div class="restaurant-item-addr">📍 '+(r.address||'—')+'</div>'+
+               '</div></div>';
+    }
+
+    // ── Active marker highlight ──
+    function setActive(idx) {
+        if (activeIdx >= 0 && markers[activeIdx] && allPlaces[activeIdx]) {
+            markers[activeIdx].setIcon(makeIcon(allPlaces[activeIdx], false));
+            var old = document.getElementById('item-'+activeIdx);
+            if (old) old.classList.remove('active');
+        }
+        activeIdx = idx;
+        if (idx < 0) return;
+        
+        if (markers[idx] && allPlaces[idx]) {
+            markers[idx].setIcon(makeIcon(allPlaces[idx], true));
+        }
+        
+        var el = document.getElementById('item-'+idx);
+        if (el) { 
+            el.classList.add('active'); 
+            el.scrollIntoView({behavior:'smooth',block:'nearest'}); 
+        }
+    }
+
+    // ── Show Place Detail View inside Sidebar ──
+    function showPlaceDetail(r, idx) {
+        if (!r) return;
+        
+        // Populate detail panel elements
+        document.getElementById('detail-name').textContent = r.name;
+        document.getElementById('detail-address').textContent = r.address || 'Chưa có địa chỉ';
+        document.getElementById('detail-price').textContent = r.priceRange ? '💰 ' + r.priceRange : '💰 Tầm giá chưa cập nhật';
+        
+        var descLabel = document.getElementById('detail-desc-label');
+        if (descLabel) {
+            descLabel.textContent = r.itemType === 'hotel' ? 'Mô tả khách sạn' : (r.isCafe ? 'Mô tả quán cafe' : 'Mô tả quán ăn');
+        }
+        document.getElementById('detail-desc').textContent = r.description || (r.itemType === 'hotel' ? 'Chưa có mô tả chi tiết cho khách sạn này.' : (r.isCafe ? 'Chưa có mô tả chi tiết cho quán cafe này.' : 'Chưa có mô tả chi tiết cho quán ăn này.'));
+        
+        var phoneVal = r.phoneNumber || 'Không có';
+        document.getElementById('detail-phone').textContent = phoneVal;
+        var phoneItem = document.getElementById('detail-phone-item');
+        if (r.phoneNumber) {
+            phoneItem.style.display = 'flex';
+            document.getElementById('btn-call').href = 'tel:' + r.phoneNumber;
+            document.getElementById('btn-call').style.display = 'inline-flex';
+        } else {
+            phoneItem.style.display = 'none';
+            document.getElementById('btn-call').style.display = 'none';
+        }
+        
+        // Hotel Specific Meta
+        var hotelMeta = document.getElementById('detail-hotel-meta');
+        if (r.itemType === 'hotel') {
+            hotelMeta.style.display = 'flex';
+            
+            // Star rating
+            var starsEl = document.getElementById('detail-stars');
+            var starsStr = '';
+            for (var s = 0; s < (r.starRating || 5); s++) {
+                starsStr += '⭐';
+            }
+            starsEl.textContent = starsStr + ' (' + (r.starRating || 5) + ' sao)';
+            
+            // Amenities
+            var amenitiesEl = document.getElementById('detail-amenities');
+            amenitiesEl.innerHTML = '';
+            if (r.amenities) {
+                var list = r.amenities.split(',').map(function(s) { return s.trim(); });
+                list.forEach(function(amen) {
+                    if (!amen) return;
+                    var icon = '✨';
+                    var lower = amen.toLowerCase();
+                    if (lower.includes('wifi')) icon = '📶';
+                    else if (lower.includes('hồ bơi') || lower.includes('bể bơi')) icon = '🏊';
+                    else if (lower.includes('bar') || lower.includes('quầy')) icon = '🍸';
+                    else if (lower.includes('spa') || lower.includes('massage')) icon = '🧖';
+                    else if (lower.includes('gym') || lower.includes('phòng tập')) icon = '🏋️';
+                    else if (lower.includes('sáng') || lower.includes('buffet')) icon = '🍳';
+                    else if (lower.includes('sông') || lower.includes('cận')) icon = '🌊';
+                    
+                    amenitiesEl.innerHTML += '<span class="amenity-tag" style="background: rgba(37, 99, 235, 0.08); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.15); border-radius: 4px; padding: 2px 8px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">' + icon + ' ' + amen + '</span>';
+                });
+            }
+        } else {
+            hotelMeta.style.display = 'none';
+        }
+        
+        // Image
+        var detailImg = document.getElementById('detail-img');
+        var fallbackImg = r.itemType === 'hotel' ? 
+            'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500' : 
+            (r.isCafe ? 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=500' : 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500');
+        detailImg.src = r.imageUrl || fallbackImg;
+        
+        // Distance badge
+        var distBadge = document.getElementById('detail-distance');
+        if (userLatLng && r.latitude && r.longitude) {
+            var d = calcDistance(userLatLng.lat, userLatLng.lng, r.latitude, r.longitude);
+            distBadge.textContent = '🚶 ' + formatDistance(d) + ' từ vị trí của bạn';
+            distBadge.style.display = 'inline-block';
+        } else {
+            distBadge.style.display = 'none';
+        }
+        
+        // Full details page button
+        var controllerName = r.itemType === 'hotel' ? 'Hotel' : 'Restaurant';
+        document.getElementById('btn-full-details').href = '/' + controllerName + '/Details/' + r.id;
+        
+        // Copy address button
+        var copyBtn = document.getElementById('btn-copy-address');
+        copyBtn.onclick = function(e) {
+            e.stopPropagation();
+            navigator.clipboard.writeText(r.address || '').then(function() {
+                showToast('📋 Đã sao chép địa chỉ địa điểm!', 'success');
+            }).catch(function() {
+                showToast('Không thể sao chép địa chỉ.', 'error');
+            });
+        };
+        
+        // Directions Button Click Handler
+        var directionsBtn = document.getElementById('btn-directions');
+        directionsBtn.onclick = function() {
+            if (!userLatLng) {
+                showToast('📍 Vui lòng bật định vị vị trí hiện tại để vẽ đường!', 'warning');
+                locateUser();
+                return;
+            }
+            drawRouteTo(r);
+        };
+        
+        // Transition views
+        document.getElementById('sidebar-list-view').classList.remove('active');
+        setTimeout(function() {
+            document.getElementById('sidebar-list-view').style.display = 'none';
+            
+            var detailView = document.getElementById('sidebar-detail-view');
+            detailView.style.display = 'flex';
+            setTimeout(function() {
+                detailView.classList.add('active');
+            }, 50);
+        }, 150);
+        
+        // Highlight marker
+        setActive(idx);
+        var m = markers[idx];
+        if (m) {
+            map.flyTo(m.getLatLng(), 16, {
+                animate: true,
+                duration: 1.2,
+                easeLinearity: 0.25
+            });
+            setTimeout(function() {
+                m.openPopup();
+            }, 600);
+        }
+    }
+    
+    // Global bridge for popups to trigger detail view
+    window.triggerDetailView = function(idx) {
+        var r = allPlaces[idx];
+        showPlaceDetail(r, idx);
+    };
+
+    // ── Back to list handler ──
+    document.getElementById('btn-back-to-list').addEventListener('click', function() {
+        if (currentRouteLine) {
+            map.removeLayer(currentRouteLine);
+            currentRouteLine = null;
+        }
+        if (currentRouteAnimMarker) {
+            map.removeLayer(currentRouteAnimMarker);
+            currentRouteAnimMarker = null;
+        }
+        
+        var detailView = document.getElementById('sidebar-detail-view');
+        detailView.classList.remove('active');
+        
+        setTimeout(function() {
+            detailView.style.display = 'none';
+            
+            var listView = document.getElementById('sidebar-list-view');
+            listView.style.display = 'flex';
+            setTimeout(function() {
+                listView.classList.add('active');
+            }, 50);
+        }, 150);
+        
+        setActive(-1);
+    });
+
+    // ── Helper to start/stop Leaflet marker bounce animation ──
+    function startMarkerBounce(idx) {
+        if (markers[idx]) {
+            var el = markers[idx].getElement();
+            if (el) {
+                var container = el.querySelector('.g-marker-container');
+                if (container) container.classList.add('marker-bounce-active');
+            }
+        }
+    }
+    function stopMarkerBounce(idx) {
+        if (markers[idx]) {
+            var el = markers[idx].getElement();
+            if (el) {
+                var container = el.querySelector('.g-marker-container');
+                if (container) container.classList.remove('marker-bounce-active');
+            }
+        }
+    }
+
+    // ── Render sidebar list ──
+    function render(list) {
+        var listEl = document.getElementById('restaurant-list');
+        listEl.innerHTML = '';
+        if (list.length === 0) {
+            var icon = activeCategoryFilter === 'hotel' ? '🏨' : (activeCategoryFilter === 'cafe' ? '☕' : '🍴');
+            var name = activeCategoryFilter === 'hotel' ? 'khách sạn' : (activeCategoryFilter === 'cafe' ? 'quán cafe' : (activeCategoryFilter === 'restaurant' ? 'nhà hàng' : 'địa điểm'));
+            listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">' + icon + '</div>'+
+                '<div class="empty-state-title">Không tìm thấy ' + name + ' nào</div>'+
+                '<div class="empty-state-desc">Thử thay đổi bộ lọc hoặc từ khoá khác</div></div>';
+            document.getElementById('count-text').textContent = '0 ' + name;
+            document.getElementById('count-badge').textContent = '0';
+            return;
+        }
+        
+        list.forEach(function(r) { 
+            var actualIdx = allPlaces.indexOf(r);
+            listEl.innerHTML += buildCard(r, actualIdx); 
+        });
+        
+        var categoryName = activeCategoryFilter === 'hotel' ? ' khách sạn' : (activeCategoryFilter === 'cafe' ? ' quán cafe' : (activeCategoryFilter === 'restaurant' ? ' nhà hàng' : ' địa điểm'));
+        document.getElementById('count-text').textContent = list.length + categoryName;
+        document.getElementById('count-badge').textContent = list.length;
+        
+        listEl.querySelectorAll('.restaurant-item').forEach(function(el) {
+            el.addEventListener('click', function() {
+                var idx = parseInt(this.dataset.idx);
+                var r = allPlaces[idx];
+                showPlaceDetail(r, idx);
+            });
+            el.addEventListener('mouseenter', function() {
+                var idx = parseInt(this.dataset.idx);
+                startMarkerBounce(idx);
+            });
+            el.addEventListener('mouseleave', function() {
+                var idx = parseInt(this.dataset.idx);
+                stopMarkerBounce(idx);
+            });
+        });
+    }
+
+    // ── UNIFIED FILTER + SORT PIPELINE ──
+    function applyFilters() {
+        var q = (document.getElementById('search-input').value || '').trim().toLowerCase();
+        
+        // Show/hide clear search button
+        var clearBtn = document.getElementById('clear-search');
+        if (q.length > 0) {
+            clearBtn.style.display = 'block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+
+        // 1. Filter: category + text + price
+        var filtered = allPlaces.filter(function(r, i) {
+            var catOk = (activeCategoryFilter === 'all') || 
+                        (activeCategoryFilter === 'cafe' && r.itemType === 'restaurant' && r.isCafe) ||
+                        (activeCategoryFilter === 'restaurant' && r.itemType === 'restaurant' && !r.isCafe) ||
+                        (activeCategoryFilter === 'hotel' && r.itemType === 'hotel');
+            
+            var textOk = !q ||
+                (r.name        && r.name.toLowerCase().includes(q)) ||
+                (r.address     && r.address.toLowerCase().includes(q)) ||
+                (r.description && r.description.toLowerCase().includes(q));
+                
+            var priceOk = matchPrice(r, activePriceFilter);
+            
+            var pass = catOk && textOk && priceOk;
+            if (markers[i]) { 
+                if (pass) markers[i].addTo(map); 
+                else map.removeLayer(markers[i]); 
+            }
+            return pass;
+        });
+
+        // 2. Auto-sort nearest first when location is known
+        if (userLatLng) {
+            filtered = filtered.slice().sort(function(a, b) {
+                var da = (a.latitude && a.longitude)
+                    ? calcDistance(userLatLng.lat, userLatLng.lng, a.latitude, a.longitude) : 9999;
+                var db = (b.latitude && b.longitude)
+                    ? calcDistance(userLatLng.lat, userLatLng.lng, b.latitude, b.longitude) : 9999;
+                return da - db;
+            });
+        }
+
+        render(filtered);
+    }
+
+    // ── Build map markers ──
+    allPlaces.forEach(function(r, i) {
+        if (!r.latitude || !r.longitude) return;
+        var m = L.marker([r.latitude, r.longitude], {icon: makeIcon(r, false)})
+            .addTo(map)
+            .bindPopup(buildPopup(r), {maxWidth: 240});
+            
+        m.on('click', function() { 
+            showPlaceDetail(r, i);
+        });
+        
+        m.on('popupclose', function() { 
+            var detailView = document.getElementById('sidebar-detail-view');
+            if (detailView.style.display === 'none' && activeIdx === i) {
+                setActive(-1); 
+            }
+        });
+        markers[i] = m;
+    });
+
+    applyFilters();
+
+    // ── Search input ──
+    document.getElementById('search-input').addEventListener('input', applyFilters);
+    
+    // Clear search event
+    document.getElementById('clear-search').addEventListener('click', function() {
+        document.getElementById('search-input').value = '';
+        applyFilters();
+        document.getElementById('search-input').focus();
+    });
+
+    // ── Category chip buttons ──
+    document.getElementById('category-chips').addEventListener('click', function(e) {
+        var chip = e.target.closest('.price-chip');
+        if (!chip) return;
+        document.querySelectorAll('#category-chips .price-chip').forEach(function(c) { c.classList.remove('active'); });
+        chip.classList.add('active');
+        activeCategoryFilter = chip.dataset.category;
+        applyFilters();
+    });
+
+    // ── Price chip buttons ──
+    document.getElementById('price-chips').addEventListener('click', function(e) {
+        var chip = e.target.closest('.price-chip');
+        if (!chip) return;
+        document.querySelectorAll('#price-chips .price-chip').forEach(function(c) { c.classList.remove('active'); });
+        chip.classList.add('active');
+        activePriceFilter = chip.dataset.price;
+        applyFilters();
+    });
+
+    // ── User location marker icon ──
+    var userLocationIcon = L.divIcon({
+        className: '',
+        html: '<div class="user-location-marker"><div class="user-location-pulse"></div><div class="user-location-dot"></div></div>',
+        iconSize: [24,24], iconAnchor: [12,12], popupAnchor: [0,-16]
+    });
+
+    function locateUser() {
+        if (!navigator.geolocation) { showToast('Trình duyệt không hỗ trợ định vị GPS.','error'); return; }
+        var btnSidebar = document.getElementById('btn-my-location');
+        var btnMap     = document.getElementById('btn-locate-map');
+        var txtEl      = document.getElementById('btn-location-text');
+        
+        txtEl.textContent = 'Định vị...';
+        btnSidebar.classList.add('loading');
+        btnMap.classList.add('loading');
+
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                var lat = pos.coords.latitude, lng = pos.coords.longitude, acc = pos.coords.accuracy;
+                userLatLng = {lat: lat, lng: lng};
+
+                if (userMarker)         map.removeLayer(userMarker);
+                if (userAccuracyCircle) map.removeLayer(userAccuracyCircle);
+
+                userAccuracyCircle = L.circle([lat, lng], {
+                    radius: acc, color:'#3b82f6', fillColor:'#3b82f6',
+                    fillOpacity:.1, weight:1.5, dashArray:'4 4'
+                }).addTo(map);
+
+                userMarker = L.marker([lat, lng], {icon: userLocationIcon, zIndexOffset: 1000})
+                    .addTo(map)
+                    .bindPopup('<div class="popup-card">'+
+                        '<div class="popup-name" style="color:#3b82f6">📡 Vị trí của bạn</div>'+
+                        '<div class="popup-addr">Độ chính xác: ~'+Math.round(acc)+' m</div>'+
+                        '</div>');
+
+                map.setView([lat, lng], 15, {animate: true});
+
+                txtEl.textContent = 'Vị trí của tôi ✓';
+                btnSidebar.classList.remove('loading'); btnSidebar.classList.add('located');
+                btnMap.classList.remove('loading');     btnMap.classList.add('located');
+
+                document.getElementById('user-location-bar').style.display = 'inline';
+                document.getElementById('user-location-coords').textContent =
+                    lat.toFixed(5)+', '+lng.toFixed(5);
+
+                document.getElementById('nearby-badge').style.display = 'inline-flex';
+
+                applyFilters();
+                renderDealsCarousel();         // Re-render floating carousel
+                renderDealsBannerSection();     // Re-render section bên dưới với sort theo khoảng cách
+                
+                allPlaces.forEach(function(r, i) {
+                    if (markers[i]) markers[i].setPopupContent(buildPopup(r));
+                });
+
+                showToast('🎯 Đã định vị thành công! Đang ưu tiên địa điểm gần bạn.', 'success');
+            },
+            function(err) {
+                txtEl.textContent = 'Vị trí của tôi';
+                btnSidebar.classList.remove('loading'); btnMap.classList.remove('loading');
+                var msg = 'Không thể lấy vị trí.';
+                if (err.code === 1) msg = 'Bạn đã từ chối quyền truy cập vị trí.';
+                else if (err.code === 2) msg = 'Không xác định được vị trí. Kiểm tra GPS.';
+                else if (err.code === 3) msg = 'Hết thời gian lấy vị trí. Thử lại nhé.';
+                showToast(msg, 'error');
+            },
+            {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000}
+        );
+    }
+
+    // ── Button listeners ──
+    document.getElementById('btn-my-location').addEventListener('click', locateUser);
+    document.getElementById('btn-locate-map').addEventListener('click', locateUser);
+
+    // ── Real Routing using Free Open Source Routing Machine (OSRM) ──
+    function drawRouteTo(place) {
+        if (!userLatLng) return;
+        
+        if (currentRouteLine) {
+            map.removeLayer(currentRouteLine);
+            currentRouteLine = null;
+        }
+        if (currentRouteAnimMarker) {
+            map.removeLayer(currentRouteAnimMarker);
+            currentRouteAnimMarker = null;
+        }
+        
+        var startLat = userLatLng.lat;
+        var startLng = userLatLng.lng;
+        var endLat = place.latitude;
+        var endLng = place.longitude;
+        
+        showToast('🧭 Đang tính toán tuyến đường đi bộ tốt nhất...', 'info');
+        
+        var url = 'https://router.project-osrm.org/route/v1/foot/' + startLng + ',' + startLat + ';' + endLng + ',' + endLat + '?overview=full&geometries=geojson';
+        
+        fetch(url)
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                    var route = data.routes[0];
+                    var geojson = route.geometry;
+                    
+                    var shadowLine = L.geoJSON(geojson, {
+                        style: {
+                            color: '#1d4ed8',
+                            weight: 9,
+                            opacity: 0.4,
+                            lineCap: 'round',
+                            lineJoin: 'round'
+                        }
+                    });
+                    
+                    var pathLine = L.geoJSON(geojson, {
+                        style: {
+                            color: '#3b82f6',
+                            weight: 6,
+                            opacity: 0.95,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                            className: 'route-animated'
+                        }
+                    });
+                    
+                    currentRouteLine = L.featureGroup([shadowLine, pathLine]).addTo(map);
+                    map.fitBounds(currentRouteLine.getBounds(), { padding: [50, 50], animate: true });
+                    
+                    var dist = route.distance / 1000;
+                    var time = route.duration / 60;
+                    
+                    showToast('🚶 Đường đi bộ: ' + dist.toFixed(2) + ' km (Khoảng ' + Math.round(time) + ' phút)', 'success');
+                    animateRouteMarker(geojson.coordinates);
+                } else {
+                    drawDirectLineFallback(startLat, startLng, endLat, endLng);
+                }
+            })
+            .catch(function(err) {
+                console.warn("OSRM error, falling back to direct line:", err);
+                drawDirectLineFallback(startLat, startLng, endLat, endLng);
+            });
+    }
+    
+    function animateRouteMarker(coordinates) {
+        if (!coordinates || coordinates.length === 0) return;
+        var latlngs = coordinates.map(function(c) { return L.latLng(c[1], c[0]); });
+        
+        var animDotIcon = L.divIcon({
+            className: '',
+            html: '<div class="route-anim-dot"></div>',
+            iconSize: [12, 12], iconAnchor: [6, 6]
+        });
+        
+        currentRouteAnimMarker = L.marker(latlngs[0], {icon: animDotIcon}).addTo(map);
+        
+        var step = 0;
+        var totalSteps = latlngs.length;
+        
+        function moveDot() {
+            if (!currentRouteAnimMarker || !map.hasLayer(currentRouteAnimMarker)) return;
+            currentRouteAnimMarker.setLatLng(latlngs[step]);
+            step = (step + 1) % totalSteps;
+            setTimeout(moveDot, 350);
+        }
+        
+        moveDot();
+    }
+    
+    function drawDirectLineFallback(startLat, startLng, endLat, endLng) {
+        currentRouteLine = L.polyline([[startLat, startLng], [endLat, endLng]], {
+            color: '#3b82f6',
+            weight: 5,
+            opacity: 0.9,
+            className: 'route-animated'
+        }).addTo(map);
+        
+        map.fitBounds(currentRouteLine.getBounds(), { padding: [50, 50] });
+        var d = calcDistance(startLat, startLng, endLat, endLng);
+        showToast('📍 Đã nối đường thẳng chim bay: ' + formatDistance(d), 'success');
+    }
+
+    // ── Dynamic Floating Carousel (trên bản đồ) ──
+    function renderDealsCarousel() {
+        var container = document.getElementById('dynamic-carousel-container');
+        if (!container) return;
+
+        var bannerPlaces = allPlaces.filter(function(r) { return r.bannerUrl && r.bannerStatus === 2; });
+        if (bannerPlaces.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        if (userLatLng) {
+            bannerPlaces = bannerPlaces.slice().sort(function(a, b) {
+                var da = (a.latitude && a.longitude) ? calcDistance(userLatLng.lat, userLatLng.lng, a.latitude, a.longitude) : 9999;
+                var db = (b.latitude && b.longitude) ? calcDistance(userLatLng.lat, userLatLng.lng, b.latitude, b.longitude) : 9999;
+                return da - db;
+            });
+        } else {
+            bannerPlaces = bannerPlaces.slice().sort(function(a, b) { return b.id - a.id; });
+        }
+        bannerPlaces = bannerPlaces.slice(0, 5);
+
+        var slideCount = bannerPlaces.length;
+        var currentSlide = 0;
+        var autoplayTimer = null;
+
+        function buildSlides(activeIdx) {
+            return bannerPlaces.map(function(r, i) {
+                var distBadge = '';
+                if (userLatLng && r.latitude && r.longitude) {
+                    var d = calcDistance(userLatLng.lat, userLatLng.lng, r.latitude, r.longitude);
+                    distBadge = '<span class="fc-dist-badge">📍 '+formatDistance(d)+'</span>';
+                }
+                var label = r.itemType === 'hotel' ? '🏨 Khách sạn' : (r.isCafe ? '☕ Quán Cafe' : '🍴 Nhà hàng');
+                return '<div class="fc-slide'+(i === activeIdx ? ' active' : '')+'" data-index="'+i+'" onclick="window.triggerDetailView('+allPlaces.indexOf(r)+')">'+
+                    '<img src="'+r.bannerUrl+'" alt="'+r.name+'" class="fc-img" />'+
+                    '<div class="fc-caption">'+
+                        '<div class="fc-caption-name">'+r.name+' ('+label+')'+distBadge+'</div>'+
+                    '</div>'+
+                '</div>';
+            }).join('');
+        }
+
+        function buildDots(activeIdx) {
+            if (slideCount <= 1) return '';
+            var d = '';
+            for (var i = 0; i < slideCount; i++) {
+                d += '<button class="fc-dot'+(i === activeIdx ? ' active' : '')+'" data-dot="'+i+'"></button>';
+            }
+            return '<div class="fc-dots">'+d+'</div>';
+        }
+
+        function goTo(idx) {
+            currentSlide = (idx + slideCount) % slideCount;
+            document.getElementById('fc-slides-wrap').innerHTML = buildSlides(currentSlide);
+            var dotsWrap = document.getElementById('fc-dots-wrap');
+            if (dotsWrap) dotsWrap.innerHTML = buildDots(currentSlide);
+            bindDots();
+        }
+
+        function bindDots() {
+            var dotsWrap = document.getElementById('fc-dots-wrap');
+            if (!dotsWrap) return;
+            dotsWrap.querySelectorAll('.fc-dot').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    clearInterval(autoplayTimer);
+                    goTo(parseInt(this.dataset.dot));
+                    startAutoplay();
+                });
+            });
+        }
+
+        function startAutoplay() {
+            clearInterval(autoplayTimer);
+            autoplayTimer = setInterval(function() { goTo(currentSlide + 1); }, 4500);
+        }
+
+        var nearbyLabel = userLatLng ? '<span class="fc-nearby-label">📍 Gần bạn</span>' : '';
+
+        var html = '<div class="fc-wrapper" id="fc-wrapper" style="pointer-events:all;">'+
+            '<div class="fc-header">'+
+                '<span class="fc-title">✨ Địa điểm gợi ý cho bạn</span>'+
+                nearbyLabel+
+                '<button class="fc-close" id="fc-close" title="Đóng">✕</button>'+
+            '</div>'+
+            '<div class="fc-body">'+
+                '<div class="fc-slides" id="fc-slides-wrap">'+buildSlides(0)+'</div>'+
+                (slideCount > 1 ?
+                    '<button class="fc-nav fc-prev" id="fc-prev">&#8249;</button>'+
+                    '<button class="fc-nav fc-next" id="fc-next">&#8250;</button>' : '')+
+            '</div>'+
+            '<div id="fc-dots-wrap">'+buildDots(0)+'</div>'+
+        '</div>';
+
+        container.innerHTML = html;
+
+        var closeBtn = document.getElementById('fc-close');
+        if (closeBtn) closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('fc-wrapper').style.display = 'none';
+            clearInterval(autoplayTimer);
+        });
+
+        var prevBtn = document.getElementById('fc-prev');
+        var nextBtn = document.getElementById('fc-next');
+        if (prevBtn) prevBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            clearInterval(autoplayTimer);
+            goTo(currentSlide - 1);
+            startAutoplay();
+        });
+        if (nextBtn) nextBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            clearInterval(autoplayTimer);
+            goTo(currentSlide + 1);
+            startAutoplay();
+        });
+
+        bindDots();
+        if (slideCount > 1) startAutoplay();
+    }
+
+    // ── "Ưu đãi siêu hời" Section (below map) ──
+    function renderDealsBannerSection() {
+        var track   = document.getElementById('deals-scroll-track');
+        var section = document.getElementById('deals-section');
+        var nearbyHint  = document.getElementById('deals-nearby-hint');
+        var countLabel  = document.getElementById('deals-count-label');
+        if (!track) return;
+
+        var bannerPlaces = allPlaces.filter(function(r) { return r.bannerUrl && r.bannerStatus === 2; });
+        if (bannerPlaces.length === 0) {
+            if (section) section.style.display = 'none';
+            return;
+        }
+
+        var hasGps = !!userLatLng;
+        if (hasGps) {
+            bannerPlaces = bannerPlaces.slice().sort(function(a, b) {
+                var da = (a.latitude && a.longitude) ? calcDistance(userLatLng.lat, userLatLng.lng, a.latitude, a.longitude) : 9999;
+                var db = (b.latitude && b.longitude) ? calcDistance(userLatLng.lat, userLatLng.lng, b.latitude, b.longitude) : 9999;
+                return da - db;
+            });
+        } else {
+            bannerPlaces = bannerPlaces.slice().sort(function(a, b) { return b.id - a.id; });
+        }
+        bannerPlaces = bannerPlaces.slice(0, 8);
+
+        if (section) section.style.display = 'block';
+        if (nearbyHint) nearbyHint.style.display = hasGps ? 'inline-flex' : 'none';
+        if (countLabel) countLabel.textContent = bannerPlaces.length + ' địa điểm';
+
+        var html = '';
+        bannerPlaces.forEach(function(r) {
+            var distHtml = '';
+            if (hasGps && r.latitude && r.longitude) {
+                var d = calcDistance(userLatLng.lat, userLatLng.lng, r.latitude, r.longitude);
+                distHtml = '<div class="deal-banner-dist">📍 '+formatDistance(d)+'</div>';
+            }
+            var controller = r.itemType === 'hotel' ? 'Hotel' : 'Restaurant';
+            html += '<a class="deal-banner-card" href="/'+controller+'/Details/'+r.id+'">'+
+                        '<div class="deal-banner-img-wrap">'+
+                            '<img src="'+r.bannerUrl+'" alt="'+r.name+'" />'+
+                            '<div class="deal-banner-overlay"></div>'+
+                        '</div>'+
+                        '<div class="deal-banner-info">'+
+                            '<div class="deal-banner-name">'+r.name+'</div>'+
+                            distHtml+
+                        '</div>'+
+                    '</a>';
+        });
+
+        track.querySelectorAll('.deal-banner-card').forEach(function(el) { el.remove(); });
+        track.insertAdjacentHTML('afterbegin', html);
+    }
+
+    // Call initially
+    renderDealsCarousel();
+    renderDealsBannerSection();
+
+    setTimeout(function() {
+        if (typeof showToast === 'function' && allPlaces.length > 0)
+            showToast('Tìm thấy ' + allPlaces.length + ' địa điểm ẩm thực & lưu trú trên bản đồ!', 'success');
+    }, 600);
+
+})();
+</script>
+}

@@ -1,0 +1,793 @@
+@model DACS.Models.Hotel
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<IdentityUser> UserManager
+@{
+    ViewData["Title"] = Model.Name;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var currentUser = await UserManager.GetUserAsync(User);
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="container py-5 animate-in">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert-glass success mb-4">
+            ✅ @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert-glass mb-4" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
+            ❌ @TempData["Error"]
+        </div>
+    }
+
+    <div class="row g-4">
+        @* ── Left Column: Info ── *@
+        <div class="col-lg-8">
+            <div class="card-glass p-0 overflow-hidden mb-4">
+                @{
+                    var slides = new System.Collections.Generic.List<(string Url, int? ImageId)>();
+                    if (!string.IsNullOrEmpty(Model.ImageUrl))
+                        slides.Add((Model.ImageUrl, null));
+                    foreach (var gi in Model.Images)
+                        slides.Add((gi.ImageUrl, gi.Id));
+
+                    bool isOwnerOrAdmin = User.Identity!.IsAuthenticated &&
+                        (Model.OwnerId == currentUser?.Id || User.IsInRole("Admin"));
+                }
+
+                @* ── Image Slider ── *@
+                <div class="restaurant-slider" id="restaurantSlider">
+                    @if (slides.Count == 0)
+                    {
+                        <div class="slider-empty-placeholder">
+                            <span>🏨</span>
+                            <p>Chưa có ảnh khách sạn</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="slider-track" id="sliderTrack">
+                            @for (int i = 0; i < slides.Count; i++)
+                            {
+                                <div class="slider-slide @(i == 0 ? "active" : "")" data-index="@i"
+                                     style="background-image:url('@slides[i].Url')">
+                                    <div class="hero-overlay"></div>
+
+                                    @if (isOwnerOrAdmin && slides[i].ImageId != null)
+                                    {
+                                        <form method="post" asp-action="DeleteImage"
+                                              class="slider-delete-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="imageId" value="@slides[i].ImageId" />
+                                            <input type="hidden" name="hotelId" value="@Model.Id" />
+                                            <button type="submit" class="slider-delete-btn"
+                                                    onclick="return confirm('Xóa ảnh này?')">
+                                                🗑
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        @if (slides.Count > 1)
+                        {
+                            <button class="slider-nav prev" id="sliderPrev" aria-label="Ảnh trước">&#8249;</button>
+                            <button class="slider-nav next" id="sliderNext" aria-label="Ảnh sau">&#8250;</button>
+
+                            <div class="slider-dots" id="sliderDots">
+                                @for (int i = 0; i < slides.Count; i++)
+                                {
+                                    <span class="dot @(i == 0 ? "active" : "")" data-dot="@i"></span>
+                                }
+                            </div>
+                        }
+                    }
+
+                    @if (isOwnerOrAdmin)
+                    {
+                        <div class="slider-add-zone">
+                            <form method="post" asp-action="AddImage"
+                                  enctype="multipart/form-data" class="slider-add-form" id="addImageForm">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="hotelId" value="@Model.Id" />
+                                <label for="sliderImageInput" class="slider-add-btn" title="Thêm ảnh">
+                                    <span>＋</span>
+                                </label>
+                                <input type="file" id="sliderImageInput" name="image"
+                                       accept="image/*" class="d-none"
+                                       onchange="document.getElementById('addImageForm').submit()" />
+                            </form>
+                        </div>
+                    }
+                </div>
+
+                <div class="p-4 p-md-5 position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+                        <div>
+                            <h1 class="details-title mb-2">@Model.Name</h1>
+                            <div class="hotel-stars-display text-warning">
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    if (s <= Model.StarRating)
+                                    {
+                                        <span>★</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="opacity: 0.3;">★</span>
+                                    }
+                                }
+                                <span class="ms-2 text-muted text-sm">Khách sạn @Model.StarRating Sao</span>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.PriceRange))
+                        {
+                            <span class="details-price-badge">💰 @Model.PriceRange / Đêm</span>
+                        }
+                    </div>
+
+                    <div class="details-meta mb-4">
+                        <div class="meta-item">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>@(string.IsNullOrEmpty(Model.Address) ? "Chưa có địa chỉ" : Model.Address)</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                        {
+                            <div class="meta-item">
+                                <i class="fa-solid fa-phone"></i>
+                                <span>@Model.PhoneNumber</span>
+                            </div>
+                        }
+                    </div>
+
+                    @* Amenities Section *@
+                    @if (!string.IsNullOrEmpty(Model.Amenities))
+                    {
+                        <div class="details-section mb-4">
+                            <h3 class="section-subtitle mb-3">🏪 Tiện ích khách sạn</h3>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var am in Model.Amenities.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    <span class="badge py-2 px-3" style="background: rgba(249, 115, 22, 0.1); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.25); border-radius: 20px; font-size: 0.85rem;">
+                                        ✨ @am.Trim()
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="details-section">
+                        <h3 class="section-subtitle">Mô tả</h3>
+                        <p class="details-text">
+                            @(string.IsNullOrEmpty(Model.Description) ? "Chưa có mô tả chi tiết cho khách sạn này." : Model.Description)
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Premium Local AI Summary Widget ── *@
+            @{
+                string FormatMarkdown(string txt)
+                {
+                    if (string.IsNullOrEmpty(txt)) return "";
+                    var parts = txt.Split("**");
+                    var sb = new System.Text.StringBuilder();
+                    for (int i = 0; i < parts.Length; i++)
+                    {
+                        if (i % 2 == 1)
+                            sb.Append("<strong>" + parts[i] + "</strong>");
+                        else
+                            sb.Append(parts[i]);
+                    }
+                    return sb.ToString().Replace("\n", "<br/>");
+                }
+            }
+
+            <div class="card-glass-ai p-4 p-md-5 mb-4 position-relative overflow-hidden">
+                <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%); filter: blur(30px); pointer-events: none;"></div>
+                <div style="position: absolute; bottom: -50px; left: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%); filter: blur(30px); pointer-events: none;"></div>
+                
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <div class="ai-icon-pulse" style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); animation: pulse-glow 2s infinite alternate;">
+                        ✨
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle mb-0" style="background: linear-gradient(to right, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 0.15rem;">
+                            Tóm tắt Đánh giá AI
+                        </h3>
+                        <span class="text-muted small">Phân tích cảm xúc & bình luận cộng đồng cục bộ</span>
+                    </div>
+                </div>
+
+                <div class="ai-summary-content" style="font-size: 0.96rem; line-height: 1.7; color: #e2e8f0;">
+                    @if (ViewBag.AiSummary != null)
+                    {
+                        @Html.Raw(FormatMarkdown((string)ViewBag.AiSummary))
+                    }
+                    else
+                    {
+                        <span class="text-muted">Đang tải báo cáo tóm tắt từ AI...</span>
+                    }
+                </div>
+                
+                <div class="mt-4 pt-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-top-color: rgba(255, 255, 255, 0.08) !important;">
+                    <span class="text-muted small d-flex align-items-center gap-1" style="font-size: 0.8rem;">
+                        ⚡ Phân tích bằng mô hình xử lý ngôn ngữ tự nhiên 100% Cục bộ & Bảo mật
+                    </span>
+                    <button class="btn btn-sm btn-outline-primary" style="font-size: 0.72rem; border-radius: 20px; border-color: rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 4px 12px; background: rgba(59, 130, 246, 0.05);" onclick="location.reload();">
+                        🔄 Phân tích lại
+                    </button>
+                </div>
+            </div>
+
+            <style>
+                @@keyframes pulse-glow {
+                    0% { transform: scale(1); box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+                    100% { transform: scale(1.05); box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); }
+                }
+            </style>
+
+
+            @* ── Comments Section ── *@
+            <div class="card-glass p-4 p-md-5">
+                @{
+                    var ratedComments = Model.Comments.Where(c => c.Rating > 0).ToList();
+                    var avgRating = ratedComments.Any() ? ratedComments.Average(c => c.Rating) : 0;
+                    var totalReviews = Model.Comments.Count;
+                }
+
+                @* Overall Rating Header *@
+                <div class="rating-overall mb-4">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div>
+                            <h3 class="section-subtitle mb-1">
+                                <i class="fa-solid fa-comments me-2"></i> Đánh giá & Bình luận
+                            </h3>
+                            <span class="text-muted small">@totalReviews bình luận</span>
+                        </div>
+                        @if (ratedComments.Any())
+                        {
+                            <div class="overall-rating-badge">
+                                <span class="overall-score">@avgRating.ToString("F1")</span>
+                                <div class="overall-stars">
+                                    @for (int s = 1; s <= 5; s++)
+                                    {
+                                        if (s <= Math.Round(avgRating))
+                                        {
+                                            <span class="star filled">★</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="star empty">★</span>
+                                        }
+                                    }
+                                </div>
+                                <span class="overall-label">/ 5</span>
+                            </div>
+                        }
+                    </div>
+                    @if (ratedComments.Any())
+                    {
+                        <div class="rating-bars mt-3">
+                            @for (int star = 5; star >= 1; star--)
+                            {
+                                var count = ratedComments.Count(c => c.Rating == star);
+                                var pct = totalReviews > 0 ? (count * 100.0 / totalReviews) : 0;
+                                <div class="rating-bar-row">
+                                    <span class="rating-bar-label">@star ★</span>
+                                    <div class="rating-bar-track">
+                                        <div class="rating-bar-fill" style="width: @pct.ToString("F0")%"></div>
+                                    </div>
+                                    <span class="rating-bar-count">@count</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <form asp-action="AddComment" method="post" class="mb-5">
+                        <input type="hidden" name="hotelId" value="@Model.Id" />
+                        <input type="hidden" name="rating" id="rating-value" value="5" />
+
+                        <div class="star-picker mb-3">
+                            <div class="star-picker-label">Đánh giá của bạn</div>
+                            <div class="star-picker-stars" id="star-picker">
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    <button type="button" class="star-btn @(s <= 5 ? "active" : "")" data-value="@s">★</button>
+                                }
+                            </div>
+                            <span class="star-picker-hint" id="star-hint">Tuyệt vời</span>
+                        </div>
+
+                        <div class="comment-input-wrapper">
+                            <textarea name="content" class="form-control-custom" rows="3"
+                                      placeholder="Chia sẻ trải nghiệm lưu trú của bạn tại khách sạn này..." required></textarea>
+                            <button type="submit" class="btn-primary-custom mt-3">
+                                <span>Gửi bình luận</span>
+                                <i class="fa-solid fa-paper-plane ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="alert-glass mb-5 text-center">
+                        Vui lòng <a asp-area="Identity" asp-page="/Account/Login" asp-route-returnUrl="@Context.Request.Path">đăng nhập</a> để bình luận.
+                    </div>
+                }
+
+                <div class="comments-list">
+                    @if (Model.Comments.Any())
+                    {
+                        @foreach (var c in Model.Comments.OrderByDescending(x => x.CreatedAt))
+                        {
+                            <div class="comment-item">
+                                <div class="comment-avatar">
+                                    @(c.User?.Email?.Substring(0, 1).ToUpper() ?? "U")
+                                </div>
+                                <div class="comment-body">
+                                    <div class="comment-header">
+                                        <span class="comment-user">@c.User?.Email</span>
+                                        <span class="comment-date">@c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <div class="comment-stars mb-1">
+                                        @for (int s = 1; s <= 5; s++)
+                                        {
+                                            <span class="cstar @(s <= c.Rating ? "filled" : "empty")">★</span>
+                                        }
+                                        <span class="comment-rating-num">@c.Rating/5</span>
+                                    </div>
+                                    <div class="comment-content">
+                                        @c.Content
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            Chưa có đánh giá nào cho khách sạn này. Hãy để lại trải nghiệm của bạn!
+                        </div>
+                    }
+                </div>
+            </div>
+        </div> @* end col-lg-8 *@
+
+        @* ── Right Column ── *@
+        <div class="col-lg-4">
+
+            @* Quick Info Card *@
+            <div class="card-glass p-4 mb-4">
+                <h3 class="section-subtitle mb-3">📋 Thông tin nhanh</h3>
+                <div class="quick-info-list">
+                    @{
+                        var qi_rated = Model.Comments.Where(c => c.Rating > 0).ToList();
+                        var qi_avg   = qi_rated.Any() ? qi_rated.Average(c => c.Rating) : 0;
+                    }
+                    <div class="quick-info-row">
+                        <span class="qi-icon">⭐</span>
+                        <div class="qi-body">
+                            @if (qi_rated.Any())
+                            {
+                                <span class="qi-label">Đánh giá khách hàng</span>
+                                <span class="qi-value text-warning fw-bold">@qi_avg.ToString("F1") / 5</span>
+                                <div class="qi-stars">
+                                    @for (int s = 1; s <= 5; s++)
+                                    {
+                                        <span class="cstar @(s <= Math.Round(qi_avg) ? "filled" : "empty")">★</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="qi-label">Chưa có đánh giá</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="quick-info-row">
+                        <span class="qi-icon">📍</span>
+                        <div class="qi-body">
+                            <span class="qi-label">Địa chỉ</span>
+                            <span class="qi-value">@(string.IsNullOrEmpty(Model.Address) ? "Chưa cập nhật" : Model.Address)</span>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                    {
+                        <div class="quick-info-row">
+                            <span class="qi-icon">📞</span>
+                            <div class="qi-body">
+                                <span class="qi-label">Điện thoại đặt phòng</span>
+                                <a href="tel:@Model.PhoneNumber" class="qi-value text-primary">@Model.PhoneNumber</a>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.PriceRange))
+                    {
+                        <div class="quick-info-row">
+                            <span class="qi-icon">💰</span>
+                            <div class="qi-body">
+                                <span class="qi-label">Mức giá trung bình</span>
+                                <span class="qi-value">@Model.PriceRange</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (User.Identity.IsAuthenticated && (Model.OwnerId == currentUser?.Id || User.IsInRole("Admin")))
+                {
+                    <div class="d-flex gap-2 mt-4">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-outline-custom flex-grow-1 justify-content-center">
+                            <i class="fa-solid fa-pen me-1"></i> Chỉnh sửa
+                        </a>
+                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn-danger-custom justify-content-center">
+                            <i class="fa-solid fa-trash"></i>
+                        </a>
+                    </div>
+                }
+            </div>
+
+            @* Banner Ads Card *@
+            @if (User.Identity.IsAuthenticated && (Model.OwnerId == currentUser?.Id || User.IsInRole("Admin")))
+            {
+                <div class="card-glass p-4 mb-4" style="border-color: rgba(251, 191, 36, 0.4);">
+                    <h3 class="section-subtitle mb-2 text-warning">
+                        <i class="fa-solid fa-bullhorn me-2"></i> Banner quảng cáo
+                    </h3>
+
+                    @if (Model.BannerStatus == DACS.Models.BannerStatus.Active)
+                    {
+                        <div class="mb-3">
+                            <span class="badge" style="background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3);">
+                                ✅ Đang hiển thị trên trang chủ
+                            </span>
+                            <img src="@Model.BannerUrl" class="mt-2" style="width:100%;border-radius:8px;border:1px solid var(--border);" alt="Banner" />
+                        </div>
+                    }
+                    else if (Model.BannerStatus == DACS.Models.BannerStatus.PendingPayment)
+                    {
+                        <div class="mb-3" style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:.9rem 1rem;">
+                            <span class="badge mb-2" style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);">
+                                🕒 Đang chờ duyệt thanh toán
+                            </span>
+                            <div style="font-size:.8rem;color:#94a3b8;">
+                                Yêu cầu đặt banner đã được gửi. Admin đang xác minh giao dịch của bạn.
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="small text-muted mb-3">Tải banner để quảng bá khách sạn của bạn tại thanh trượt trang chủ!</p>
+                    }
+
+                    @{
+                        bool canUpload = Model.BannerStatus == DACS.Models.BannerStatus.None
+                                       || Model.BannerStatus == DACS.Models.BannerStatus.Rejected;
+                        bool canDelete = !string.IsNullOrEmpty(Model.BannerUrl)
+                                       && Model.BannerStatus != DACS.Models.BannerStatus.PendingPayment;
+                    }
+                    <div class="d-flex gap-2 mt-1">
+                        @if (canUpload || User.IsInRole("Admin"))
+                        {
+                            <a asp-action="Payment" asp-route-id="@Model.Id"
+                               class="btn-primary-custom flex-grow-1 justify-content-center"
+                               style="background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.3);text-decoration:none;">
+                                ⬆️ Đăng tải Banner
+                            </a>
+                        }
+                        @if (canDelete)
+                        {
+                            <form method="post" asp-action="DeleteBanner" style="margin:0;">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <button type="submit" class="btn-outline-custom text-danger" title="Xóa banner">
+                                    🗑️
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* Location Map Card *@
+            <div class="card-glass p-4">
+                <h3 class="section-subtitle mb-3">🗺 Vị trí khách sạn</h3>
+                <div id="details-map" style="height: 280px; border-radius: 12px; border: 1px solid var(--border)"></div>
+                <div class="mt-3">
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=@Model.Latitude,@Model.Longitude"
+                       target="_blank" class="btn-outline-custom w-100 justify-content-center">
+                        <i class="fa-solid fa-signs-post me-2"></i> Chỉ đường (Google Maps)
+                    </a>
+                </div>
+            </div>
+
+        </div> @* end col-lg-4 *@
+    </div> @* end row *@
+</div> @* end container *@
+
+@section Scripts {
+<style>
+.restaurant-slider {
+    position: relative;
+    width: 100%;
+    height: 340px;
+    overflow: hidden;
+    background: var(--surface-light, #1e293b);
+}
+.slider-track {
+    display: flex;
+    height: 100%;
+}
+.slider-slide {
+    min-width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: none;
+}
+.slider-slide.active {
+    display: block;
+    animation: slideIn .45s cubic-bezier(.4,0,.2,1);
+}
+@@keyframes slideIn {
+    from { opacity: 0; transform: scale(1.04); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.slider-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,.45);
+    color: #fff;
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 1.6rem;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+    transition: background 0.2s, transform 0.2s;
+}
+.slider-nav:hover { background: rgba(249,115,22,.75); transform: translateY(-50%) scale(1.1); }
+.slider-nav.prev { left: 14px; }
+.slider-nav.next { right: 14px; }
+
+.slider-dots {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 7px;
+    z-index: 10;
+}
+.dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.45);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+.dot.active { background: #f97316; transform: scale(1.35); }
+
+.slider-empty-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #94a3b8;
+    font-size: 2.5rem;
+}
+.slider-empty-placeholder p { font-size: .95rem; margin-top: .5rem; }
+
+.slider-add-zone {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    z-index: 20;
+}
+.slider-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: rgba(249,115,22,.85);
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.35);
+    border: 2px solid rgba(255,255,255,.25);
+    transition: background 0.2s, transform 0.2s;
+    backdrop-filter: blur(6px);
+}
+.slider-add-btn:hover { background: #ea580c; transform: scale(1.12); }
+
+.slider-delete-form {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 20;
+}
+.slider-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(239,68,68,.8);
+    color: #fff;
+    border: 2px solid rgba(255,255,255,.25);
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: background 0.2s, transform 0.2s;
+}
+.slider-delete-btn:hover { background: #dc2626; transform: scale(1.1); }
+</style>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    var map = L.map('details-map', { zoomControl: false }).setView([@Model.Latitude, @Model.Longitude], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    var customIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:32px;height:32px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid rgba(255,255,255,.4);box-shadow:0 3px 10px rgba(0,0,0,.4);">' +
+              '<span style="display:block;transform:rotate(45deg);text-align:center;line-height:28px;font-size:14px;">🏨</span></div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32]
+    });
+
+    L.marker([@Model.Latitude, @Model.Longitude], { icon: customIcon }).addTo(map);
+</script>
+
+<script>
+(function () {
+    var hints = ['', 'Tệ', 'Không tốt', 'Bình thường', 'Rất hài lòng', 'Tuyệt vời'];
+    var currentRating = 5;
+
+    var picker   = document.getElementById('star-picker');
+    var valInput = document.getElementById('rating-value');
+    var hintEl   = document.getElementById('star-hint');
+    if (!picker) return;
+
+    var btns = picker.querySelectorAll('.star-btn');
+
+    function setRating(val) {
+        currentRating = val;
+        if (valInput) valInput.value = val;
+        if (hintEl)   hintEl.textContent = hints[val] || '';
+        btns.forEach(function(b) {
+            var v = parseInt(b.dataset.value);
+            b.classList.toggle('active', v <= val);
+        });
+    }
+
+    btns.forEach(function(btn) {
+        btn.addEventListener('mouseenter', function() {
+            var v = parseInt(this.dataset.value);
+            btns.forEach(function(b) {
+                b.classList.toggle('hover', parseInt(b.dataset.value) <= v);
+            });
+            if (hintEl) hintEl.textContent = hints[v] || '';
+        });
+        btn.addEventListener('mouseleave', function() {
+            btns.forEach(function(b) { b.classList.remove('hover'); });
+            if (hintEl) hintEl.textContent = hints[currentRating] || '';
+        });
+        btn.addEventListener('click', function() {
+            setRating(parseInt(this.dataset.value));
+        });
+    });
+
+    setRating(5);
+})();
+</script>
+
+<script>
+// ── Dynamic AI Summary Pill Renderer & Staggered Fade-in ──
+(function () {
+    const container = document.querySelector('.ai-summary-content');
+    if (!container) return;
+    
+    const rawHtml = container.innerHTML.trim();
+    if (!rawHtml || rawHtml.includes('Đang tải')) return;
+
+    // Split text into lines based on <br> tags
+    const rawLines = rawHtml.split(/<br\s*\/?>/gi);
+    container.innerHTML = ''; // Clear container
+
+    let delay = 100;
+    rawLines.forEach(line => {
+        let trimmed = line.trim();
+        if (!trimmed) return;
+
+        let isPos = trimmed.includes('💚') || trimmed.includes('Ưu điểm');
+        let isNeg = trimmed.includes('⚠️') || trimmed.includes('lưu ý');
+
+        // Extract and replace strong tags with structured badge pills
+        trimmed = trimmed.replace(/<strong>(.*?)<\/strong>/gi, (match, word) => {
+            if (isPos) {
+                return `<span class="ai-pill positive">✨ ${word}</span>`;
+            } else if (isNeg) {
+                return `<span class="ai-pill negative">⚠️ ${word}</span>`;
+            }
+            return `<strong style="color:var(--primary); font-weight:700;">${word}</strong>`;
+        });
+
+        const lineEl = document.createElement('div');
+        lineEl.className = 'ai-summary-line mb-3';
+        lineEl.innerHTML = trimmed;
+        container.appendChild(lineEl);
+
+        setTimeout(() => {
+            lineEl.classList.add('visible');
+        }, delay);
+        delay += 200;
+    });
+})();
+
+// Slider logic
+(function () {
+    var slides = document.querySelectorAll('#restaurantSlider .slider-slide');
+    var dots   = document.querySelectorAll('#sliderDots .dot');
+    var prevBtn = document.getElementById('sliderPrev');
+    var nextBtn = document.getElementById('sliderNext');
+    if (!slides.length) return;
+
+    var current = 0;
+    var total   = slides.length;
+    var timer;
+
+    function goTo(idx) {
+        slides[current].classList.remove('active');
+        if (dots[current]) dots[current].classList.remove('active');
+        current = (idx + total) % total;
+        slides[current].classList.add('active');
+        if (dots[current]) dots[current].classList.add('active');
+    }
+
+    function startAuto() {
+        if (total <= 1) return;
+        timer = setInterval(function () { goTo(current + 1); }, 4500);
+    }
+    function stopAuto() { clearInterval(timer); }
+
+    if (prevBtn) prevBtn.addEventListener('click', function () { stopAuto(); goTo(current - 1); startAuto(); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { stopAuto(); goTo(current + 1); startAuto(); });
+
+    dots.forEach(function (dot) {
+        dot.addEventListener('click', function () {
+            stopAuto();
+            goTo(parseInt(this.dataset.dot));
+            startAuto();
+        });
+    });
+
+    var slider = document.getElementById('restaurantSlider');
+    if (slider) {
+        slider.addEventListener('mouseenter', stopAuto);
+        slider.addEventListener('mouseleave', startAuto);
+    }
+
+    startAuto();
+})();
+</script>
+}
