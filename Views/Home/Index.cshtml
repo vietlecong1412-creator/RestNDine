@@ -10,6 +10,11 @@
 <div class="map-layout">
     @* ── Sidebar ── *@
     <aside class="map-sidebar">
+        @* Nút thu nhỏ/mở rộng sidebar trên mobile *@
+        <button type="button" class="btn-toggle-sidebar" id="toggle-sidebar-btn" aria-label="Thu nhỏ/Mở rộng">
+            <span class="toggle-icon">▼</span>
+        </button>
+
         @* ── View 1: List and Search View ── *@
         <div class="sidebar-view active" id="sidebar-list-view">
             <div class="map-sidebar-header">
@@ -1167,7 +1172,40 @@
         track.insertAdjacentHTML('afterbegin', html);
     }
 
+    // ── Xử lý Thu nhỏ/Mở rộng Sidebar trên Mobile ──
+    function initMobileSidebarToggle() {
+        var toggleBtn = document.getElementById('toggle-sidebar-btn');
+        var sidebar = document.querySelector('.map-sidebar');
+        var mapLayout = document.querySelector('.map-layout');
+        
+        if (toggleBtn && sidebar && mapLayout) {
+            toggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var isCollapsed = sidebar.classList.toggle('collapsed');
+                mapLayout.classList.toggle('sidebar-collapsed', isCollapsed);
+                
+                var icon = toggleBtn.querySelector('.toggle-icon');
+                if (isCollapsed) {
+                    icon.textContent = '▲'; // Nhấn để mở rộng
+                    if (typeof showToast === 'function') {
+                        showToast('Đã thu nhỏ thanh tìm kiếm. Bạn có thể xem bản đồ rộng hơn!', 'info');
+                    }
+                } else {
+                    icon.textContent = '▼'; // Nhấn để thu nhỏ
+                }
+                
+                // Cập nhật lại kích thước bản đồ Leaflet sau khi co giãn
+                setTimeout(function() {
+                    if (typeof map !== 'undefined' && map) {
+                        map.invalidateSize({ animate: true });
+                    }
+                }, 300);
+            });
+        }
+    }
+
     // Call initially
+    initMobileSidebarToggle();
     renderDealsCarousel();
     renderDealsBannerSection();
 

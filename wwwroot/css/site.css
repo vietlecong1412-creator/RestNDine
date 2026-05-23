@@ -3720,3 +3720,65 @@ footer.site-footer {
   }
 }
 }
+
+/* ── Collapse / Expand Sidebar Toggle Button ── */
+.btn-toggle-sidebar {
+  display: none; /* Hidden on desktop */
+}
+
+@media (max-width: 768px) {
+  .btn-toggle-sidebar {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid var(--border);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: absolute;
+    right: 1.25rem;
+    top: 1.25rem;
+    z-index: 1010;
+    box-shadow: var(--shadow-sm);
+  }
+  .dark-theme .btn-toggle-sidebar {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+  }
+  .btn-toggle-sidebar:hover {
+    background: #ffffff;
+    color: var(--primary);
+    transform: scale(1.08);
+  }
+  .dark-theme .btn-toggle-sidebar:hover {
+    background: rgba(30, 41, 59, 0.9);
+  }
+  .btn-toggle-sidebar .toggle-icon {
+    font-size: 0.65rem;
+    transition: transform 0.3s ease;
+    display: inline-block;
+  }
+  
+  /* Collapsed sidebar mobile behaviors */
+  .map-sidebar.collapsed {
+    height: 62px !important;
+    overflow: hidden !important;
+  }
+  .map-sidebar.collapsed .map-search-wrapper,
+  .map-sidebar.collapsed .price-chips-container,
+  .map-sidebar.collapsed .map-toolbar,
+  .map-sidebar.collapsed .restaurant-list,
+  .map-sidebar.collapsed .map-count-bar,
+  .map-sidebar.collapsed .sidebar-detail-body {
+    display: none !important;
+  }
+  .map-layout.sidebar-collapsed .leaflet-bottom.leaflet-right,
+  .map-layout.sidebar-collapsed .map-tip {
+    bottom: 78px !important;
+  }
+}
