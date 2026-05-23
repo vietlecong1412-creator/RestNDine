@@ -3663,6 +3663,14 @@ footer.site-footer {
     transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  /* Suggested places floating container positioning on mobile */
+  #dynamic-carousel-container {
+    bottom: 416px !important;
+    width: 90% !important;
+    max-width: 360px !important;
+    transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   /* Style selector button positioning */
   .map-style-selector {
     top: 12px;
@@ -3761,7 +3769,8 @@ footer.site-footer {
     display: none !important;
   }
   .map-layout.sidebar-collapsed .leaflet-bottom.leaflet-right,
-  .map-layout.sidebar-collapsed .map-tip {
+  .map-layout.sidebar-collapsed .map-tip,
+  .map-layout.sidebar-collapsed #dynamic-carousel-container {
     bottom: 78px !important;
   }
 }
