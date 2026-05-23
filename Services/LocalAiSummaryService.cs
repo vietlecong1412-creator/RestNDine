@@ -6,11 +6,19 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace DACS.Services
 {
     public class LocalAiSummaryService : IAiSummaryService
     {
+        private readonly IMemoryCache _cache;
+
+        public LocalAiSummaryService(IMemoryCache cache)
+        {
+            _cache = cache;
+        }
+
         public class PythonReport
         {
             public int total_reviews { get; set; }
@@ -28,8 +36,21 @@ namespace DACS.Services
                 return "📍 Chưa có đủ đánh giá từ cộng đồng để AI tiến hành phân tích. Hãy là người đầu tiên chia sẻ cảm nhận của bạn!";
             }
 
+            // Create a self-invalidating cache key using sorted reviews combination
+            var sortedReviews = reviewList.OrderBy(r => r).ToList();
+            var reviewsCombined = string.Join("|", sortedReviews);
+            var reviewsHash = reviewsCombined.GetHashCode();
+            var cacheKey = $"AiSummary_{placeName}_{reviewsHash}";
+
+            if (_cache.TryGetValue(cacheKey, out string? cachedSummary) && !string.IsNullOrEmpty(cachedSummary))
+            {
+                return cachedSummary;
+            }
+
             // ── BƯỚC 1: Cố gắng chạy mô hình AI Học máy bằng Python ──
             var pythonOutput = await RunPythonAnalysisAsync(reviewList);
+            string summary;
+
             if (!string.IsNullOrEmpty(pythonOutput))
             {
                 try
@@ -38,7 +59,9 @@ namespace DACS.Services
                     var report = JsonSerializer.Deserialize<PythonReport>(pythonOutput, options);
                     if (report != null && report.overall_sentiment != null)
                     {
-                        return FormatPythonReport(report);
+                        summary = FormatPythonReport(report);
+                        _cache.Set(cacheKey, summary, TimeSpan.FromHours(6)); // Cache for up to 6 hours
+                        return summary;
                     }
                 }
                 catch (Exception ex)
@@ -48,7 +71,9 @@ namespace DACS.Services
             }
 
             // ── BƯỚC 2: Bộ Phân Tích dự phòng (Rule-based C#) ──
-            return GetRuleBasedFallback(reviewList);
+            summary = GetRuleBasedFallback(reviewList);
+            _cache.Set(cacheKey, summary, TimeSpan.FromHours(6)); // Cache for up to 6 hours
+            return summary;
         }
 
         private async Task<string?> RunPythonAnalysisAsync(List<string> reviews)
