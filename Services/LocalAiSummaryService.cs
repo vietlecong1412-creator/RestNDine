@@ -92,6 +92,8 @@ namespace DACS.Services
                         RedirectStandardInput = true,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
+                        StandardInputEncoding = Encoding.UTF8,
+                        StandardOutputEncoding = Encoding.UTF8,
                         UseShellExecute = false,
                         CreateNoWindow = true,
                         WorkingDirectory = Directory.GetCurrentDirectory()
