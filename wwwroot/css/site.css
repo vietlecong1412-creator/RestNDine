@@ -147,11 +147,12 @@ body {
 .nav-link {
   color: #5f6368 !important; /* Google grey */
   font-weight: 600;
-  font-size: .9rem;
-  padding: .4rem .85rem !important;
+  font-size: .85rem;
+  padding: .4rem .6rem !important;
   border-radius: 8px;
   transition: var(--transition);
   position: relative;
+  white-space: nowrap;
 }
 
 .dark-theme .nav-link {
@@ -212,12 +213,21 @@ body {
   background: #f1f3f4;
   border: 1px solid #dadce0;
   border-radius: 50px;
-  padding: .3rem .75rem;
-  font-size: .85rem;
+  padding: .3rem .65rem;
+  font-size: .82rem;
   font-weight: 600;
   color: #202124 !important;
   text-decoration: none;
   transition: var(--transition);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.user-badge span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dark-theme .user-badge {
@@ -308,12 +318,13 @@ body {
   color: #d93025 !important; /* Google Red */
   font-size: .85rem;
   font-weight: 600;
-  padding: .4rem 1rem;
+  padding: .4rem .75rem;
   border-radius: 8px;
   cursor: pointer;
   transition: var(--transition);
   text-decoration: none;
   display: inline-block;
+  white-space: nowrap;
 }
 
 .dark-theme .btn-logout {

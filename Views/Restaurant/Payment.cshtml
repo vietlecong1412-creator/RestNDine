@@ -3,149 +3,154 @@
     ViewData["Title"] = "Thanh toán phí quảng cáo – " + Model.Name;
     Layout = "~/Views/Shared/_Layout.cshtml";
 
-    // Thông tin ngân hàng (tuỳ chỉnh theo thực tế)
     var bankId      = "970436";   // Vietcombank
     var accountNo   = "0001028780";
     var accountName = "LE CONG VIET";
     var amount      = 10000;
     var description = $"Quang cao {Model.Id}";
-
-    // Sinh URL QR qua VietQR API
     var qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-compact2.png" +
                 $"?amount={amount}&addInfo={Uri.EscapeDataString(description)}&accountName={Uri.EscapeDataString(accountName)}";
 }
 
 <style>
+    /* ── Base ─────────────────────────────────────────────── */
     .payment-wrapper {
         min-height: calc(100vh - 80px);
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
-        padding: 2rem 1rem;
+        padding: 3rem 1rem 4rem;
     }
 
-    .payment-card {
-        background: linear-gradient(145deg, rgba(22, 27, 47, 0.97), rgba(15, 19, 35, 0.99));
-        border: 1px solid rgba(251, 191, 36, 0.25);
-        border-radius: 24px;
-        padding: 2.5rem;
-        max-width: 520px;
+    .payment-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        max-width: 960px;
         width: 100%;
-        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5), 0 0 60px rgba(251, 191, 36, 0.06);
+        animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @@keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @@media (max-width: 700px) {
+        .payment-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Card shell ───────────────────────────────────────── */
+    .pay-card {
+        background: linear-gradient(160deg, rgba(22,27,47,0.98) 0%, rgba(13,17,30,0.99) 100%);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 24px;
+        padding: 2rem;
         position: relative;
         overflow: hidden;
-        animation: slide-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.45);
     }
 
-    .payment-card::before {
+    .pay-card::before {
         content: '';
         position: absolute;
-        inset: 0;
-        background: radial-gradient(ellipse at 50% 0%, rgba(251, 191, 36, 0.07) 0%, transparent 60%);
-        pointer-events: none;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(251,191,36,0.4), transparent);
     }
 
-    @@keyframes slide-up {
-        from { opacity: 0; transform: translateY(28px); }
-        to   { opacity: 1; transform: translateY(0);    }
-    }
-
-    .payment-badge {
+    /* ── Left column header ───────────────────────────────── */
+    .pay-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        background: rgba(251, 191, 36, 0.1);
-        border: 1px solid rgba(251, 191, 36, 0.3);
+        gap: 0.45rem;
+        background: rgba(251,191,36,0.1);
+        border: 1px solid rgba(251,191,36,0.3);
         color: #fbbf24;
-        padding: 0.4rem 1rem;
+        padding: 0.35rem 0.9rem;
         border-radius: 999px;
-        font-size: 0.78rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        margin-bottom: 1.2rem;
-    }
-
-    .payment-title {
-        font-size: 1.5rem;
+        font-size: 0.72rem;
         font-weight: 700;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }
+
+    .pay-title {
+        font-size: 1.45rem;
+        font-weight: 800;
         color: #f1f5f9;
-        margin-bottom: 0.3rem;
         line-height: 1.3;
+        margin-bottom: 0.3rem;
     }
 
-    .payment-subtitle {
-        font-size: 0.9rem;
-        color: #94a3b8;
-        margin-bottom: 2rem;
+    .pay-title em { color: #fbbf24; font-style: normal; }
+
+    .pay-subtitle {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 1.8rem;
+        line-height: 1.6;
     }
 
-    /* QR wrapper */
-    .qr-wrapper {
-        position: relative;
+    /* ── QR frame ─────────────────────────────────────────── */
+    .qr-outer {
         display: flex;
-        align-items: center;
         justify-content: center;
-        margin: 0 auto 1.8rem;
+        margin-bottom: 1.8rem;
+        position: relative;
     }
 
     .qr-glow {
         position: absolute;
-        inset: -20px;
-        background: radial-gradient(circle, rgba(34, 197, 94, 0.15), transparent 70%);
+        inset: -24px;
+        background: radial-gradient(circle, rgba(34,197,94,0.12) 0%, transparent 65%);
         border-radius: 50%;
+        animation: pulseGlow 3s ease-in-out infinite;
         pointer-events: none;
-        animation: pulse-glow 3s ease-in-out infinite;
     }
 
-    @@keyframes pulse-glow {
-        0%, 100% { opacity: 0.7; transform: scale(0.95); }
-        50%       { opacity: 1;   transform: scale(1.05); }
+    @@keyframes pulseGlow {
+        0%,100% { opacity: 0.6; transform: scale(0.92); }
+        50%      { opacity: 1;   transform: scale(1.06); }
     }
 
     .qr-frame {
-        background: #ffffff;
+        background: #fff;
         border-radius: 20px;
-        padding: 16px;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+        padding: 14px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
         position: relative;
         z-index: 1;
     }
 
     .qr-frame img {
         display: block;
-        width: 220px;
-        height: 220px;
+        width: 200px;
+        height: 200px;
         border-radius: 8px;
     }
 
-    .qr-loading {
-        width: 220px;
-        height: 220px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f0f4f8;
+    .qr-skeleton {
+        width: 200px;
+        height: 200px;
         border-radius: 8px;
+        background: linear-gradient(90deg, #e2e8f0 25%, #f0f4f8 50%, #e2e8f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.4s infinite;
     }
 
-    .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #e2e8f0;
-        border-top-color: #22c55e;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
+    @@keyframes shimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
     }
 
-    @@keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Bank info */
-    .bank-info {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+    /* ── Bank info table ──────────────────────────────────── */
+    .bank-table {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
         border-radius: 14px;
-        padding: 1.2rem 1.4rem;
+        overflow: hidden;
         margin-bottom: 1.5rem;
     }
 
@@ -153,302 +158,702 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 0.65rem 1.1rem;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        transition: background 0.15s;
     }
 
     .bank-row:last-child { border-bottom: none; }
+    .bank-row:hover { background: rgba(255,255,255,0.025); }
 
     .bank-label {
-        font-size: 0.8rem;
-        color: #64748b;
+        font-size: 0.78rem;
+        color: #475569;
         font-weight: 500;
     }
 
     .bank-value {
-        font-size: 0.9rem;
+        font-size: 0.875rem;
         color: #e2e8f0;
         font-weight: 600;
-        text-align: right;
     }
 
-    .bank-value.highlight {
-        color: #fbbf24;
-        font-size: 1.1rem;
-    }
+    .bank-value.yellow { color: #fbbf24; font-size: 1rem; }
+    .bank-value.green  { color: #4ade80; }
 
-    .bank-value.green { color: #4ade80; }
-
-    /* Steps */
-    .steps-section { margin-bottom: 1.8rem; }
-
-    .steps-title {
-        font-size: 0.78rem;
-        font-weight: 600;
+    .copy-btn {
+        background: none;
+        border: none;
         color: #64748b;
+        cursor: pointer;
+        padding: 0.15rem 0.35rem;
+        border-radius: 6px;
+        transition: color 0.15s, background 0.15s;
+        font-size: 0.78rem;
+        margin-left: 0.4rem;
+    }
+
+    .copy-btn:hover { color: #fbbf24; background: rgba(251,191,36,0.1); }
+
+    /* ── Steps ────────────────────────────────────────────── */
+    .steps-label {
+        font-size: 0.7rem;
+        color: #475569;
+        font-weight: 700;
+        letter-spacing: 0.8px;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.7rem;
     }
 
     .step-item {
         display: flex;
+        gap: 0.7rem;
         align-items: flex-start;
-        gap: 0.75rem;
-        padding: 0.45rem 0;
+        padding: 0.4rem 0;
     }
 
     .step-num {
-        width: 22px;
-        height: 22px;
-        min-width: 22px;
+        min-width: 20px;
+        height: 20px;
         background: linear-gradient(135deg, #f97316, #ea580c);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.72rem;
-        font-weight: 700;
-        color: white;
+        font-size: 0.68rem;
+        font-weight: 800;
+        color: #fff;
         margin-top: 2px;
     }
 
     .step-text {
-        font-size: 0.85rem;
+        font-size: 0.83rem;
         color: #94a3b8;
+        line-height: 1.55;
+    }
+
+    /* ── Right column: buttons + upload ──────────────────── */
+    .right-card-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.78rem;
+        color: #64748b;
+        margin-bottom: 1rem;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #fbbf24;
+        box-shadow: 0 0 8px rgba(251,191,36,0.6);
+        animation: blink 1.8s ease-in-out infinite;
+    }
+
+    @@keyframes blink {
+        0%,100% { opacity: 1; }
+        50%      { opacity: 0.3; }
+    }
+
+    /* ── Dropzone ─────────────────────────────────────────── */
+    .dropzone-wrapper { margin-bottom: 1rem; }
+
+    .dropzone-label {
+        font-size: 0.72rem;
+        color: #64748b;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .dropzone-label .req { color: #ef4444; }
+
+    .dropzone {
+        border: 2px dashed rgba(255,255,255,0.1);
+        border-radius: 14px;
+        padding: 1.4rem 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        background: rgba(255,255,255,0.02);
+    }
+
+    .dropzone:hover,
+    .dropzone.drag-over {
+        border-color: rgba(251,191,36,0.4);
+        background: rgba(251,191,36,0.04);
+    }
+
+    .dropzone.has-file {
+        border-color: rgba(34,197,94,0.4);
+        background: rgba(34,197,94,0.04);
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .dropzone input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+    }
+
+    .dropzone-icon {
+        font-size: 1.6rem;
+        margin-bottom: 0.5rem;
+        color: #475569;
+        transition: color 0.2s;
+    }
+
+    .dropzone:hover .dropzone-icon { color: #fbbf24; }
+
+    .dropzone-hint {
+        font-size: 0.78rem;
+        color: #475569;
         line-height: 1.5;
     }
 
-    /* Actions */
-    .payment-actions { display: flex; gap: 0.75rem; }
+    .dropzone-hint strong { color: #94a3b8; }
 
-    .btn-pay-done {
+    .dz-preview {
+        width: 100%;
+        aspect-ratio: 16/7;
+        object-fit: cover;
+        display: block;
+        border-radius: 12px;
+    }
+
+    .dz-preview-receipt {
+        width: 100%;
+        max-height: 160px;
+        object-fit: contain;
+        display: block;
+        padding: 0.5rem;
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+    }
+
+    .dz-remove {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: rgba(239,68,68,0.85);
+        border: none;
+        color: white;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 0.7rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        transition: background 0.15s;
+    }
+
+    .dz-remove:hover { background: #ef4444; }
+
+    /* ── Action buttons ───────────────────────────────────── */
+    .action-row {
+        display: flex;
+        gap: 0.7rem;
+        margin-bottom: 1rem;
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.8rem 1.1rem;
+        background: transparent;
+        color: #94a3b8;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 0.88rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .btn-back:hover {
+        background: rgba(255,255,255,0.05);
+        color: #e2e8f0;
+        border-color: rgba(255,255,255,0.2);
+    }
+
+    .btn-paid {
         flex: 1;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        padding: 0.85rem 1.5rem;
+        padding: 0.8rem 1.4rem;
         background: linear-gradient(135deg, #22c55e, #16a34a);
-        color: white;
+        color: #fff;
         border: none;
         border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.95rem;
+        font-weight: 700;
+        font-size: 0.9rem;
         cursor: pointer;
-        text-decoration: none;
         transition: all 0.2s;
-        box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+        box-shadow: 0 4px 20px rgba(34,197,94,0.3);
     }
 
-    .btn-pay-done:hover {
+    .btn-paid:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(34, 197, 94, 0.45);
-        color: white;
+        box-shadow: 0 8px 30px rgba(34,197,94,0.45);
     }
 
-    .btn-pay-back {
-        display: inline-flex;
+    .btn-submit {
+        width: 100%;
+        display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        padding: 0.85rem 1.2rem;
-        background: transparent;
-        color: #94a3b8;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.9rem 1.5rem;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #fff;
+        border: none;
         border-radius: 12px;
-        font-weight: 500;
-        font-size: 0.9rem;
-        text-decoration: none;
-        transition: all 0.2s;
+        font-weight: 700;
+        font-size: 0.92rem;
+        cursor: pointer;
+        transition: all 0.25s;
+        box-shadow: 0 4px 20px rgba(59,130,246,0.3);
+        margin-top: 1rem;
+        position: relative;
+        overflow: hidden;
     }
 
-    .btn-pay-back:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: #e2e8f0;
-        border-color: rgba(255, 255, 255, 0.2);
+    .btn-submit:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(59,130,246,0.45);
     }
 
-    /* Note */
-    .payment-note {
-        margin-top: 1.2rem;
-        padding: 0.85rem 1.1rem;
-        background: rgba(251, 191, 36, 0.05);
-        border: 1px solid rgba(251, 191, 36, 0.15);
-        border-radius: 10px;
-        font-size: 0.8rem;
-        color: #94a3b8;
-        line-height: 1.6;
+    .btn-submit:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        transform: none;
     }
 
-    .payment-note strong { color: #fbbf24; }
+    .btn-submit .spinner-sm {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        display: none;
+    }
 
-    /* Upload section */
+    .btn-submit.loading .spinner-sm { display: block; }
+    .btn-submit.loading .btn-text   { display: none; }
+
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Upload section ───────────────────────────────────── */
     .upload-section {
         display: none;
-        margin-top: 1.5rem;
-        border-top: 1px solid rgba(255,255,255,0.08);
-        padding-top: 1.5rem;
+        animation: fadeInUp 0.35s ease both;
     }
 
-    .upload-section.visible {
-        display: block;
-        animation: slide-up 0.35s ease both;
+    .upload-section.visible { display: block; }
+
+    .upload-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(34,197,94,0.08);
+        border: 1px solid rgba(34,197,94,0.2);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.2rem;
+        font-size: 0.83rem;
+        color: #4ade80;
+        line-height: 1.5;
+    }
+
+    /* ── Note ─────────────────────────────────────────────── */
+    .pay-note {
+        margin-top: 1.5rem;
+        padding: 0.85rem 1rem;
+        background: rgba(251,191,36,0.04);
+        border: 1px solid rgba(251,191,36,0.12);
+        border-radius: 10px;
+        font-size: 0.78rem;
+        color: #64748b;
+        line-height: 1.65;
+    }
+
+    .pay-note strong { color: #fbbf24; }
+
+    /* ── Toast ────────────────────────────────────────────── */
+    .toast-container {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .toast {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: rgba(22,27,47,0.96);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 0.75rem 1.1rem;
+        color: #e2e8f0;
+        font-size: 0.85rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        animation: slideInRight 0.3s ease both;
+        max-width: 320px;
+    }
+
+    .toast.success { border-color: rgba(34,197,94,0.3); }
+    .toast.success .toast-icon { color: #4ade80; }
+    .toast.info    { border-color: rgba(59,130,246,0.3); }
+    .toast.info    .toast-icon { color: #60a5fa; }
+
+    @@keyframes slideInRight {
+        from { opacity: 0; transform: translateX(40px); }
+        to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @@keyframes fadeOut {
+        to { opacity: 0; transform: translateX(40px); }
     }
 </style>
 
+<div class="toast-container" id="toastContainer"></div>
+
 <div class="payment-wrapper">
-    <div class="payment-card">
+    <div class="payment-grid">
 
-        @* Badge *@
-        <div class="payment-badge">
-            <i class="fa-solid fa-bullhorn"></i>
-            Thanh toán quảng cáo
-        </div>
+        <!-- ══ LEFT: QR + Bank Info ══ -->
+        <div class="pay-card">
+            <div class="pay-badge">
+                <i class="fa-solid fa-bullhorn"></i>
+                Thanh toán quảng cáo
+            </div>
 
-        <div class="payment-title">Đặt banner cho <em>@Model.Name</em></div>
-        <div class="payment-subtitle">
-            Quét mã QR bên dưới để thanh toán. Banner sẽ được hiển thị trên trang chủ sau khi xác nhận.
-        </div>
+            <div class="pay-title">Đặt banner cho <em>@Model.Name</em></div>
+            <div class="pay-subtitle">
+                Quét mã QR bên dưới để thanh toán. Banner sẽ hiển thị trên trang chủ sau khi Admin xác nhận.
+            </div>
 
-        @* QR Code *@
-        <div class="qr-wrapper">
-            <div class="qr-glow"></div>
-            <div class="qr-frame">
-                <div class="qr-loading" id="qrLoading">
-                    <div class="spinner"></div>
+            <!-- QR -->
+            <div class="qr-outer">
+                <div class="qr-glow"></div>
+                <div class="qr-frame">
+                    <div class="qr-skeleton" id="qrSkeleton"></div>
+                    <img id="qrImg"
+                         src="@qrUrl"
+                         alt="QR thanh toán Vietcombank"
+                         style="display:none; width:200px; height:200px; border-radius:8px;"
+                         onload="document.getElementById('qrSkeleton').style.display='none'; this.style.display='block';"
+                         onerror="document.getElementById('qrSkeleton').innerHTML='<div style=\'color:#ef4444;font-size:.78rem;padding:1.2rem;text-align:center;\'>Không tải được QR.<br/>Vui lòng CK thủ công.</div>';" />
                 </div>
-                <img id="qrImg"
-                     src="@qrUrl"
-                     alt="QR Vietcombank thanh toán phí quảng cáo"
-                     style="display:none;"
-                     onload="document.getElementById('qrLoading').style.display='none'; this.style.display='block';"
-                     onerror="document.getElementById('qrLoading').innerHTML='<div style=\'color:#ef4444;font-size:.8rem;padding:1rem;text-align:center;\'>Không tải được QR.<br/>Vui lòng chuyển khoản thủ công.</div>';" />
             </div>
-        </div>
 
-        @* Bank Details *@
-        <div class="bank-info">
-            <div class="bank-row">
-                <span class="bank-label">Ngân hàng</span>
-                <span class="bank-value">🏦 Vietcombank</span>
+            <!-- Bank rows -->
+            <div class="bank-table">
+                <div class="bank-row">
+                    <span class="bank-label">Ngân hàng</span>
+                    <span class="bank-value">🏦 Vietcombank (VCB)</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Số tài khoản</span>
+                    <span style="display:flex;align-items:center;">
+                        <span class="bank-value green" id="accNo">@accountNo</span>
+                        <button class="copy-btn" onclick="copyText('@accountNo', this)" title="Sao chép">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Chủ tài khoản</span>
+                    <span class="bank-value">@accountName</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Số tiền</span>
+                    <span class="bank-value yellow">10,000 VNĐ</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Nội dung CK</span>
+                    <span style="display:flex;align-items:center;">
+                        <span class="bank-value" id="ckContent" style="font-family:'Courier New',monospace;font-size:.82rem;">Quang cao @Model.Id</span>
+                        <button class="copy-btn" onclick="copyText('Quang cao @Model.Id', this)" title="Sao chép">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </span>
+                </div>
             </div>
-            <div class="bank-row">
-                <span class="bank-label">Số tài khoản</span>
-                <span class="bank-value green">@accountNo</span>
-            </div>
-            <div class="bank-row">
-                <span class="bank-label">Chủ tài khoản</span>
-                <span class="bank-value">@accountName</span>
-            </div>
-            <div class="bank-row">
-                <span class="bank-label">Số tiền</span>
-                <span class="bank-value highlight">10,000 VNĐ</span>
-            </div>
-            <div class="bank-row">
-                <span class="bank-label">Nội dung CK</span>
-                <span class="bank-value" style="font-family: 'Courier New', monospace;">Quang cao @Model.Id</span>
-            </div>
-        </div>
 
-        @* Steps *@
-        <div class="steps-section">
-            <div class="steps-title">Hướng dẫn</div>
+            <!-- Steps -->
+            <div class="steps-label">Hướng dẫn thanh toán</div>
             <div class="step-item">
                 <div class="step-num">1</div>
-                <div class="step-text">
-                    Mở app ngân hàng → Quét mã QR hoặc chuyển khoản thủ công theo thông tin trên.
-                </div>
+                <div class="step-text">Mở app ngân hàng → <strong style="color:#e2e8f0;">Quét mã QR</strong> hoặc chuyển khoản thủ công.</div>
             </div>
             <div class="step-item">
                 <div class="step-num">2</div>
-                <div class="step-text">
-                    Nhập đúng nội dung chuyển khoản:
-                    <strong style="color:#e2e8f0;">Quang cao @Model.Id</strong>
-                </div>
+                <div class="step-text">Nhập đúng nội dung: <strong style="color:#fbbf24; font-family:'Courier New',monospace;">Quang cao @Model.Id</strong></div>
             </div>
-            @* Change step 3 text *@
-        <div class="step-item">
+            <div class="step-item">
                 <div class="step-num">3</div>
-                <div class="step-text">
-                    Nhấn <strong style="color:#4ade80;">"Đã thanh toán – Úp Banner"</strong>,
-                    upload ảnh banner + <strong style="color:#fbbf24;">ảnh chụp biên lai</strong> để Admin xác nhận.
-                </div>
+                <div class="step-text">Bấm <strong style="color:#4ade80;">"Đã thanh toán"</strong>, upload ảnh banner và ảnh biên lai để Admin duyệt.</div>
             </div>
         </div>
 
-        @* Action buttons *@
-        <div class="payment-actions">
-            <a href="@Url.Action("Details", "Restaurant", new { id = Model.Id })"
-               class="btn-pay-back">
-                <i class="fa-solid fa-arrow-left"></i> Quay lại
-            </a>
-            <button type="button" class="btn-pay-done" id="btnPaid" onclick="showUploadSection()">
-                <i class="fa-solid fa-circle-check"></i> Đã thanh toán – Úp Banner
-            </button>
-        </div>
-
-        @* Upload form (revealed after clicking "Đã thanh toán") *@
-        <div class="upload-section" id="uploadSection">
-            <div style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.2rem; font-size: 0.85rem; color: #4ade80;">
-                ✅ Tốt! Hãy tải lên ảnh banner <strong>và ảnh chụp biên lai chuyển khoản</strong> để Admin xác nhận.
+        <!-- ══ RIGHT: Actions + Upload ══ -->
+        <div class="pay-card">
+            <div class="right-card-header">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    Đang chờ thanh toán
+                </div>
+                <div class="pay-title" style="font-size:1.2rem;">Xác nhận & Tải lên</div>
+                <div class="pay-subtitle" style="margin-bottom:0;">Sau khi chuyển khoản thành công, điền thông tin bên dưới.</div>
             </div>
-            <form method="post" enctype="multipart/form-data"
-                  action="@Url.Action("UpdateBanner", "Restaurant")">
-                <input type="hidden" name="id" value="@Model.Id" />
 
-                @* Banner image *@
-                <div class="mb-3">
-                    <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; font-weight: 600;">
-                        1. Ảnh Banner quảng cáo <span style="color:#ef4444">*</span>
-                    </div>
-                    <input class="form-control-custom" type="file" name="bannerImage"
-                           accept="image/*" required
-                           style="background: rgba(255,255,255,0.05); border-color: rgba(34,197,94,0.3);" />
-                    <div class="mt-1" style="font-size: 0.75rem; color: #475569;">
-                        Khuyến nghị: ảnh ngang (16:9), tối thiểu 1200 × 400 px
-                    </div>
+            <!-- Step 1: confirm paid -->
+            <div id="confirmStep">
+                <div class="action-row">
+                    <a href="@Url.Action("Details", "Restaurant", new { id = Model.Id })" class="btn-back">
+                        <i class="fa-solid fa-arrow-left"></i> Quay lại
+                    </a>
+                    <button type="button" class="btn-paid" id="btnPaid" onclick="revealUpload()">
+                        <i class="fa-solid fa-circle-check"></i>
+                        Đã thanh toán – Úp Banner
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: upload form (hidden initially) -->
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-header">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Tốt! Tải lên ảnh banner <strong>và biên lai</strong> để Admin xác nhận.</span>
                 </div>
 
-                @* Payment proof *@
-                <div class="mb-3">
-                    <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; font-weight: 600;">
-                        2. Ảnh biên lai chuyển khoản <span style="color:#ef4444">*</span>
+                <form method="post" enctype="multipart/form-data"
+                      action="@Url.Action("UpdateBanner", "Restaurant")"
+                      id="uploadForm" onsubmit="handleSubmit(event)">
+                    <input type="hidden" name="id" value="@Model.Id" />
+
+                    <!-- Dropzone: Banner -->
+                    <div class="dropzone-wrapper">
+                        <div class="dropzone-label">
+                            <i class="fa-solid fa-image"></i>
+                            1. Ảnh Banner quảng cáo <span class="req">*</span>
+                        </div>
+                        <div class="dropzone" id="dz-banner"
+                             ondragover="onDragOver(event, this)"
+                             ondragleave="onDragLeave(event, this)"
+                             ondrop="onDrop(event, this, 'bannerImage', 'preview-banner', 'banner')">
+                            <input type="file" name="bannerImage" id="bannerImage"
+                                   accept="image/*" required
+                                   onchange="onFileSelect(event, 'dz-banner', 'preview-banner', 'banner')" />
+                            <div class="dropzone-icon" id="dz-banner-icon">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <div class="dropzone-hint" id="dz-banner-hint">
+                                <strong>Kéo thả ảnh vào đây</strong> hoặc bấm để chọn<br>
+                                <span style="font-size:0.72rem;color:#374151;">Khuyến nghị: 1200×400 px, tỉ lệ 16:9</span>
+                            </div>
+                            <img class="dz-preview" id="preview-banner" src="" alt="" style="display:none;" />
+                            <button type="button" class="dz-remove" id="remove-banner" style="display:none;"
+                                    onclick="clearFile('dz-banner', 'preview-banner', 'remove-banner', 'bannerImage', 'dz-banner-icon', 'dz-banner-hint')">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
                     </div>
-                    <input class="form-control-custom" type="file" name="paymentProof"
-                           accept="image/*" required
-                           style="background: rgba(255,255,255,0.05); border-color: rgba(251,191,36,0.3);" />
-                    <div class="mt-1" style="font-size: 0.75rem; color: #475569;">
-                        Chụp màn hình xác nhận giao dịch từ app ngân hàng
+
+                    <!-- Dropzone: Receipt -->
+                    <div class="dropzone-wrapper">
+                        <div class="dropzone-label">
+                            <i class="fa-solid fa-receipt"></i>
+                            2. Ảnh biên lai chuyển khoản <span class="req">*</span>
+                        </div>
+                        <div class="dropzone" id="dz-receipt"
+                             ondragover="onDragOver(event, this)"
+                             ondragleave="onDragLeave(event, this)"
+                             ondrop="onDrop(event, this, 'paymentProof', 'preview-receipt', 'receipt')">
+                            <input type="file" name="paymentProof" id="paymentProof"
+                                   accept="image/*" required
+                                   onchange="onFileSelect(event, 'dz-receipt', 'preview-receipt', 'receipt')" />
+                            <div class="dropzone-icon" id="dz-receipt-icon">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                            <div class="dropzone-hint" id="dz-receipt-hint">
+                                <strong>Kéo thả ảnh vào đây</strong> hoặc bấm để chọn<br>
+                                <span style="font-size:0.72rem;color:#374151;">Chụp màn hình xác nhận giao dịch</span>
+                            </div>
+                            <img class="dz-preview-receipt" id="preview-receipt" src="" alt="" style="display:none;" />
+                            <button type="button" class="dz-remove" id="remove-receipt" style="display:none;"
+                                    onclick="clearFile('dz-receipt', 'preview-receipt', 'remove-receipt', 'paymentProof', 'dz-receipt-icon', 'dz-receipt-hint')">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
                     </div>
+
+                    <button type="submit" class="btn-submit" id="btnSubmit">
+                        <div class="spinner-sm"></div>
+                        <span class="btn-text">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            Gửi yêu cầu duyệt banner
+                        </span>
+                    </button>
+                </form>
+
+                <div class="pay-note">
+                    <strong>Lưu ý:</strong> Sau khi gửi, Admin sẽ kiểm tra biên lai và
+                    <strong>duyệt trong vòng 24 giờ</strong>.
+                    Banner sẽ xuất hiện trên trang chủ khi được xác nhận.
                 </div>
+            </div>
 
-                <button type="submit" class="btn-pay-done" style="width: 100%;">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> Gửi yêu cầu banner
-                </button>
-            </form>
+            <!-- Before clicking: show tip -->
+            <div id="preTip" style="margin-top: auto; padding-top: 1.5rem;">
+                <div class="pay-note">
+                    <strong>Lưu ý:</strong> Sau khi chuyển khoản thành công, bấm nút
+                    <strong>"Đã thanh toán"</strong> để tải lên ảnh banner và biên lai.
+                    Admin sẽ duyệt trong vòng <strong>24 giờ</strong>.
+                </div>
+            </div>
         </div>
-
-        @* Note *@
-        <div class="payment-note">
-            <strong>Lưu ý:</strong> Sau khi gửi, Admin sẽ kiểm tra biên lai và <strong>duyệt trong vòng 24 giờ</strong>.
-            Banner sẽ xuất hiện trên trang chủ khi được xác nhận. Liên hệ Admin nếu cần hỗ trợ.
-        </div>
-
 
     </div>
 </div>
 
 @section Scripts {
 <script>
-    function showUploadSection() {
-        var sec = document.getElementById('uploadSection');
-        var btn = document.getElementById('btnPaid');
+    /* ── Reveal upload form ─────────────────────────────── */
+    function revealUpload() {
+        document.getElementById('confirmStep').style.display = 'none';
+        document.getElementById('preTip').style.display = 'none';
+        const sec = document.getElementById('uploadSection');
         sec.classList.add('visible');
-        btn.style.display = 'none';
-        setTimeout(function () {
-            sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 150);
+        setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+        showToast('info', 'Hãy tải lên ảnh banner và biên lai để hoàn tất.', 4000);
+    }
+
+    /* ── Drag & drop handlers ───────────────────────────── */
+    function onDragOver(e, el) {
+        e.preventDefault();
+        el.classList.add('drag-over');
+    }
+
+    function onDragLeave(e, el) {
+        el.classList.remove('drag-over');
+    }
+
+    function onDrop(e, el, inputName, previewId, type) {
+        e.preventDefault();
+        el.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        const input = el.querySelector('input[type="file"]');
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        showPreview(file, el.id, previewId, el.id.replace('dz-', 'remove-'), type);
+    }
+
+    /* ── File select ────────────────────────────────────── */
+    function onFileSelect(e, dzId, previewId, type) {
+        const file = e.target.files[0];
+        if (!file) return;
+        showPreview(file, dzId, previewId, dzId.replace('dz-', 'remove-'), type);
+    }
+
+    function showPreview(file, dzId, previewId, removeBtnId, type) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const dz      = document.getElementById(dzId);
+            const preview = document.getElementById(previewId);
+            const iconId  = dzId + '-icon';
+            const hintId  = dzId + '-hint';
+            preview.src = ev.target.result;
+            preview.style.display = 'block';
+            document.getElementById(iconId).style.display = 'none';
+            document.getElementById(hintId).style.display = 'none';
+            document.getElementById(removeBtnId).style.display = 'flex';
+            dz.classList.add('has-file');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /* ── Clear file ─────────────────────────────────────── */
+    function clearFile(dzId, previewId, removeBtnId, inputId, iconId, hintId) {
+        document.getElementById(inputId).value = '';
+        document.getElementById(previewId).style.display = 'none';
+        document.getElementById(previewId).src = '';
+        document.getElementById(iconId).style.display = '';
+        document.getElementById(hintId).style.display = '';
+        document.getElementById(removeBtnId).style.display = 'none';
+        document.getElementById(dzId).classList.remove('has-file');
+    }
+
+    /* ── Submit with loading state ──────────────────────── */
+    function handleSubmit(e) {
+        const btn = document.getElementById('btnSubmit');
+        btn.classList.add('loading');
+        btn.disabled = true;
+        showToast('info', 'Đang gửi yêu cầu, vui lòng chờ…');
+        // Allow form to submit naturally; re-enable if validation fails
+        setTimeout(() => {
+            // safety re-enable after 15s
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }, 15000);
+    }
+
+    /* ── Copy to clipboard ──────────────────────────────── */
+    function copyText(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            btn.style.color = '#4ade80';
+            showToast('success', 'Đã sao chép: ' + text);
+            setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 1800);
+        });
+    }
+
+    /* ── Toast notification ─────────────────────────────── */
+    function showToast(type, message, duration = 3000) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast ' + type;
+        toast.innerHTML = `
+            <span class="toast-icon">
+                <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'}"></i>
+            </span>
+            <span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     }
 </script>
 }

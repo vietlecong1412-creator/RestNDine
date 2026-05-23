@@ -36,7 +36,7 @@
 
             <div class="collapse navbar-collapse" id="mainNav">
                 @* Left nav *@
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0" style="gap:.25rem;">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0" style="gap:.5rem;">
                     <li class="nav-item">
                         <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")"
                            asp-area="" asp-controller="Home" asp-action="Index">
