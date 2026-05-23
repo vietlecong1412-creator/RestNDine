@@ -2292,23 +2292,6 @@ footer.site-footer {
 
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .map-layout {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .map-sidebar {
-    width: 100%;
-    min-width: unset;
-    height: 280px;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .map-container {
-    height: 400px;
-  }
-
   .section-header {
     flex-direction: column;
     align-items: flex-start;
