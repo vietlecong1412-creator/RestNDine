@@ -15,6 +15,9 @@ namespace DACS.Data
             RoleManager<IdentityRole> roleManager,
             ApplicationDbContext context)
         {
+            // Tự động áp dụng Migration để tạo bảng trên cơ sở dữ liệu online khi khởi chạy app
+            await context.Database.MigrateAsync();
+
             // 1. Tạo Roles nếu chưa có
             foreach (var role in new[] { "Admin", "Owner", "Customer" })
             {
