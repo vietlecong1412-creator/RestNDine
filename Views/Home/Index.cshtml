@@ -354,35 +354,35 @@
         var p   = extractPriceNums(r.priceRange);
 
         // ── KHÁCH SẠN ──
-        // Giá rẻ:   min <= 2.000.000đ/đêm  (Liberty Central 1.5M, Grand Saigon 1.5M, Rex 1.8M)
-        // Vừa phải: min <= 3.000.000đ/đêm  (Pullman 2.2M, Majestic 2M, New World 2.6M, Sheraton 2.8M)
-        // Cao cấp:  max >= 2.500.000đ/đêm  (gần như tất cả khách sạn đều có giá cao nhất > 2.5M)
+        // Giá rẻ:   min <= 500.000đ/đêm
+        // Vừa phải: min <= 1.200.000đ/đêm
+        // Cao cấp:  max >= 1.000.000đ/đêm
         if (r.itemType === 'hotel') {
             if (p === null) return filter === 'all';
-            if (filter === 'cheap')   return p.min <= 2000000;
-            if (filter === 'medium')  return p.min <= 3000000;
-            if (filter === 'premium') return p.max >= 2500000;
+            if (filter === 'cheap')   return p.min <= 500000;
+            if (filter === 'medium')  return p.min <= 1200000;
+            if (filter === 'premium') return p.max >= 1000000;
         }
 
         // ── QUÁN CAFE / TRÀ SỮA ──
-        // Giá rẻ:   max <= 40.000đ
-        // Vừa phải: max <= 70.000đ  (Highlands 69k, Đen Đá 70k, Mockingbird 85k)
-        // Cao cấp:  max >= 60.000đ  (Cộng Cà Phê 80k, Phúc Long 80k, Katinat 90k, Workshop 130k, ...)
+        // Giá rẻ:   max <= 25.000đ (Cafe cóc, cafe bình dân vỉa hè)
+        // Vừa phải: max <= 50.000đ (Highlands Coffee, trà sữa trung bình)
+        // Cao cấp:  max >= 45.000đ (Katinat, Phúc Long, Starbucks)
         if (r.itemType === 'restaurant' && r.isCafe) {
             if (p === null) return filter === 'all';
-            if (filter === 'cheap')   return p.max <= 40000;
-            if (filter === 'medium')  return p.max > 40000 && p.max <= 70000;
-            if (filter === 'premium') return p.max >= 60000;
+            if (filter === 'cheap')   return p.max <= 25000;
+            if (filter === 'medium')  return p.max > 25000 && p.max <= 50000;
+            if (filter === 'premium') return p.max >= 45000;
         }
 
         // ── NHÀ HÀNG / QUÁN ĂN ──
-        // Giá rẻ:   max <= 80.000đ  (Bánh Mì Huỳnh Hoa 85k → vừa phải)
-        // Vừa phải: max <= 130.000đ (Phở Lệ 100k ✓)
-        // Cao cấp:  max >= 100.000đ (Phở Lệ 100k, Propaganda 180k, mọi bistro/restaurant đều vào)
+        // Giá rẻ:   max <= 45.000đ (Cơm tấm vỉa hè, bánh mì, hủ tiếu bình dân)
+        // Vừa phải: max <= 90.000đ (Phở Lệ, quán ăn gia đình)
+        // Cao cấp:  max >= 80.000đ (Buffet, nhà hàng nướng/lẩu lớn)
         if (p === null) return filter === 'all';
-        if (filter === 'cheap')   return p.max <= 80000;
-        if (filter === 'medium')  return p.max > 80000 && p.max <= 130000;
-        if (filter === 'premium') return p.max >= 100000;
+        if (filter === 'cheap')   return p.max <= 45000;
+        if (filter === 'medium')  return p.max > 45000 && p.max <= 90000;
+        if (filter === 'premium') return p.max >= 80000;
 
         return true;
     }
