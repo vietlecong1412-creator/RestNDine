@@ -3587,14 +3587,17 @@ footer.site-footer {
     bottom: 0;
     width: 100%;
     height: 400px;
-    max-height: 70vh;
-    border-radius: 24px 24px 0 0;
+    max-height: 72vh;
+    border-radius: 20px 20px 0 0;
     margin: 0;
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
     border-left: none;
     border-right: none;
     border-bottom: none;
-    padding-top: 12px; /* Spacer for bottom sheet handle */
+    border-top: 1px solid rgba(0,0,0,0.06);
+    padding-top: 14px; /* Spacer for pull handle */
+    overflow: hidden;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Bottom sheet pull indicator bar */
@@ -3642,7 +3645,7 @@ footer.site-footer {
 
   /* Adjust zoom controls and locate map button to not get covered by bottom sheet */
   .leaflet-bottom.leaflet-right {
-    bottom: 416px !important; /* Stand above mobile bottom sheet */
+    bottom: 414px !important; /* Stand above mobile bottom sheet */
     right: 12px !important;
     transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -3657,7 +3660,7 @@ footer.site-footer {
   /* Floating tip positioning on mobile */
   .map-tip {
     left: 12px;
-    bottom: 416px;
+    bottom: 414px;
     font-size: 0.7rem;
     padding: 0.3rem 0.6rem;
     transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3665,7 +3668,7 @@ footer.site-footer {
 
   /* Suggested places floating container positioning on mobile */
   #dynamic-carousel-container {
-    bottom: 416px !important;
+    bottom: 414px !important;
     width: 90% !important;
     max-width: 360px !important;
     transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3709,10 +3712,32 @@ footer.site-footer {
   .btn-action-primary {
     flex: 1 1 100%; /* Make route button full width on mobile for clarity */
   }
-}
+
+  /* ── Collapsed sidebar mobile: show only header as a peek strip ── */
+  .map-sidebar.collapsed {
+    height: 62px !important;
+    transform: none !important; /* Do NOT slide left on mobile */
+    overflow: hidden !important;
+  }
+  /* In collapsed state, only the header bar is visible */
+  .map-sidebar.collapsed .map-search-wrapper,
+  .map-sidebar.collapsed .price-chips-container,
+  .map-sidebar.collapsed .map-toolbar,
+  .map-sidebar.collapsed .restaurant-list,
+  .map-sidebar.collapsed .map-count-bar,
+  .map-sidebar.collapsed .sidebar-detail-body {
+    display: none !important;
+  }
+
+  /* Controls lift above the collapsed sheet bottom (62px) */
+  .map-layout.sidebar-collapsed .leaflet-bottom.leaflet-right,
+  .map-layout.sidebar-collapsed .map-tip,
+  .map-layout.sidebar-collapsed #dynamic-carousel-container {
+    bottom: 78px !important;
+  }
 }
 
-/* ── Collapse / Expand Sidebar Toggle Button ── */
+/* ── Collapse / Expand Sidebar Toggle Button (Desktop Sibling) ── */
 .btn-toggle-sidebar {
   display: flex;
   align-items: center;
@@ -3726,8 +3751,8 @@ footer.site-footer {
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: absolute;
-  right: -18px; /* Float just outside the right border of the sidebar */
-  top: 24px;
+  left: 388px; /* 16px (sidebar left) + 390px (sidebar width) - 18px (half width of button) */
+  top: 40px; /* Aligned nicely with the top parts of the layout */
   z-index: 1020;
   box-shadow: var(--shadow-sm);
 }
@@ -3757,62 +3782,13 @@ footer.site-footer {
     box-shadow: none;
   }
   
-  .map-sidebar.collapsed .btn-toggle-sidebar {
-    right: -42px; /* Floating at the left edge of the viewport */
+  .map-layout.sidebar-collapsed .btn-toggle-sidebar {
+    left: 6px; /* Floating at the left edge of the viewport when collapsed */
     border-radius: 0 50% 50% 0; /* Semi-circle floating on the screen edge */
     border-left: 1px solid var(--border);
     box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+    z-index: 1050;
   }
 }
 
-@media (max-width: 768px) {
-  .btn-toggle-sidebar {
-    display: flex !important;
-    right: 1.25rem !important;
-    top: 1.25rem !important;
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 50% !important;
-    transform: none !important;
-    border: 1px solid var(--border) !important;
-    box-shadow: var(--shadow-sm) !important;
-  }
-  .dark-theme .btn-toggle-sidebar {
-    background: rgba(15, 23, 42, 0.85);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-  }
-  .btn-toggle-sidebar:hover {
-    background: #ffffff;
-    color: var(--primary);
-    transform: scale(1.08);
-  }
-  .dark-theme .btn-toggle-sidebar:hover {
-    background: rgba(30, 41, 59, 0.9);
-  }
-  .btn-toggle-sidebar .toggle-icon {
-    font-size: 0.65rem;
-    transition: transform 0.3s ease;
-    display: inline-block;
-  }
-  
-  /* Collapsed sidebar mobile behaviors */
-  .map-sidebar.collapsed {
-    height: 62px !important;
-    transform: none !important; /* Do NOT slide left on mobile */
-    overflow: hidden !important;
-  }
-  .map-sidebar.collapsed .map-search-wrapper,
-  .map-sidebar.collapsed .price-chips-container,
-  .map-sidebar.collapsed .map-toolbar,
-  .map-sidebar.collapsed .restaurant-list,
-  .map-sidebar.collapsed .map-count-bar,
-  .map-sidebar.collapsed .sidebar-detail-body {
-    display: none !important;
-  }
-  .map-layout.sidebar-collapsed .leaflet-bottom.leaflet-right,
-  .map-layout.sidebar-collapsed .map-tip,
-  .map-layout.sidebar-collapsed #dynamic-carousel-container {
-    bottom: 78px !important;
-  }
-}
+/* (Mobile toggle button .btn-mobile-sheet-toggle is styled in Index.cshtml inline styles) */

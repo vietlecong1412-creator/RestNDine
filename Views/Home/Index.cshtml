@@ -7,13 +7,115 @@
 @* Leaflet CSS *@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+<style>
+    /* ── Desktop Toggle Button Styles ── */
+    @@media (min-width: 769px) {
+        .btn-toggle-sidebar-mobile { display: none !important; }
+        .btn-toggle-sidebar-desktop {
+            display: flex !important;
+            position: absolute !important;
+            left: 388px !important;
+            top: 40px !important;
+            width: 36px !important;
+            height: 36px !important;
+            border-radius: 50% !important;
+            background: #ffffff !important;
+            border: 1px solid rgba(0,0,0,0.1) !important;
+            color: #5f6368 !important;
+            z-index: 99999 !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12) !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .btn-toggle-sidebar-desktop:hover {
+            background: #f8f9fa !important;
+            color: #ea580c !important;
+            transform: scale(1.08) !important;
+        }
+        .map-layout.sidebar-collapsed .btn-toggle-sidebar-desktop {
+            left: 6px !important;
+            border-radius: 0 50% 50% 0 !important;
+        }
+        .dark-theme .btn-toggle-sidebar-desktop {
+            background: #162032 !important;
+            border-color: rgba(255,255,255,0.1) !important;
+            color: #ffffff !important;
+        }
+        .dark-theme .btn-toggle-sidebar-desktop:hover {
+            background: #1e293b !important;
+            color: #ea580c !important;
+        }
+    }
+
+    /* ── Mobile Floating Toggle Button (outside sidebar, always visible) ── */
+    @@media (max-width: 768px) {
+        .btn-toggle-sidebar-desktop { display: none !important; }
+
+        /* Floating pill button that lives OUTSIDE the sidebar */
+        .btn-mobile-sheet-toggle {
+            display: flex !important;
+            position: fixed !important;
+            bottom: 68px !important;  /* sits just above collapsed sheet (62px) + margin */
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            z-index: 1200 !important;
+            background: #ffffff !important;
+            border: 1px solid rgba(0,0,0,0.12) !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.18) !important;
+            border-radius: 24px !important;
+            padding: 8px 18px !important;
+            gap: 6px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            font-size: 0.8rem !important;
+            font-weight: 600 !important;
+            color: #202124 !important;
+            letter-spacing: 0.1px !important;
+            transition: opacity 0.25s ease, transform 0.25s ease, bottom 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+            pointer-events: auto !important;
+            white-space: nowrap !important;
+        }
+
+        /* When sidebar is expanded, move button above the expanded sheet */
+        .map-layout:not(.sidebar-collapsed) .btn-mobile-sheet-toggle {
+            bottom: 408px !important;
+        }
+
+        .btn-mobile-sheet-toggle .toggle-arrow {
+            font-size: 0.7rem !important;
+            transition: transform 0.3s ease !important;
+            display: inline-block !important;
+        }
+
+        /* When collapsed, arrow points up */
+        .map-layout.sidebar-collapsed .btn-mobile-sheet-toggle .toggle-arrow {
+            transform: rotate(0deg) !important;
+        }
+        /* When expanded, arrow points down */
+        .map-layout:not(.sidebar-collapsed) .btn-mobile-sheet-toggle .toggle-arrow {
+            transform: rotate(180deg) !important;
+        }
+
+        .dark-theme .btn-mobile-sheet-toggle {
+            background: rgba(15,23,42,0.92) !important;
+            border-color: rgba(255,255,255,0.1) !important;
+            color: #e2e8f0 !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.45) !important;
+        }
+
+        /* Redesigned bottom sheet collapsed state */
+        .map-sidebar.collapsed .map-sidebar-header {
+            display: flex !important;
+        }
+    }
+</style>
+
 <div class="map-layout">
     @* ── Sidebar ── *@
     <aside class="map-sidebar">
-        @* Nút thu nhỏ/mở rộng sidebar trên mobile *@
-        <button type="button" class="btn-toggle-sidebar" id="toggle-sidebar-btn" aria-label="Thu nhỏ/Mở rộng">
-            <span class="toggle-icon">▼</span>
-        </button>
 
         @* ── View 1: List and Search View ── *@
         <div class="sidebar-view active" id="sidebar-list-view">
@@ -159,6 +261,7 @@
                 </div>
             </div>
         </div>
+        
     </aside>
 
     @* ── Map ── *@
@@ -180,6 +283,17 @@
         @* Deals Carousel Floating Widget (Rendered by JS) *@
         <div id="dynamic-carousel-container" style="pointer-events:none;"></div>
     </div>
+
+    @* Desktop Toggle Button (outside sidebar, sibling of map-container) *@
+    <button type="button" class="btn-toggle-sidebar btn-toggle-sidebar-desktop" id="toggle-sidebar-btn-desktop" aria-label="Thu nhỏ/Mở rộng">
+        <span class="toggle-icon">◀</span>
+    </button>
+
+    @* Mobile Floating Sheet Toggle (outside sidebar, always visible, position fixed) *@
+    <button type="button" class="btn-mobile-sheet-toggle" id="toggle-sidebar-btn-mobile" aria-label="Thu nhỏ/Mở rộng danh sách">
+        <span class="toggle-arrow">▲</span>
+        <span class="toggle-label">Danh sách</span>
+    </button>
 </div>
 
 @* ── Gợi ý cho bạn Section ── *@
@@ -213,7 +327,7 @@
     var allPlaces = restaurants.concat(hotels);
 
     // ── Map init ──
-    var map = L.map('map', { zoomControl: false }).setView([10.852, 106.761], 13);
+    var map = L.map('map', { zoomControl: false, tap: false }).setView([10.852, 106.761], 13);
     
     // Zoom control in bottom right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -488,6 +602,32 @@
     // ── Show Place Detail View inside Sidebar ──
     function showPlaceDetail(r, idx) {
         if (!r) return;
+        
+        // Tự động mở rộng (expand) sidebar nếu đang thu gọn (toggle off)
+        var sidebar = document.querySelector('.map-sidebar');
+        var mapLayout = document.querySelector('.map-layout');
+        if (sidebar && sidebar.classList.contains('collapsed')) {
+            sidebar.classList.remove('collapsed');
+            if (mapLayout) {
+                mapLayout.classList.remove('sidebar-collapsed');
+            }
+            
+            // Cập nhật lại icon cho các nút toggle
+            var btnMobile = document.getElementById('toggle-sidebar-btn-mobile');
+            var btnDesktop = document.getElementById('toggle-sidebar-btn-desktop');
+            // Mobile pill button uses CSS class-based arrow (no JS textContent needed)
+            var labelMobile = btnMobile ? btnMobile.querySelector('.toggle-label') : null;
+            if (labelMobile) labelMobile.textContent = 'Thu lại';
+            var iconDesktop = btnDesktop ? btnDesktop.querySelector('.toggle-icon') : null;
+            if (iconDesktop) iconDesktop.textContent = '◀';
+            
+            // Cập nhật kích thước bản đồ Leaflet sau khi giãn sidebar ra
+            setTimeout(function() {
+                if (typeof map !== 'undefined' && map) {
+                    map.invalidateSize({ animate: true });
+                }
+            }, 300);
+        }
         
         // Populate detail panel elements
         document.getElementById('detail-name').textContent = r.name;
@@ -1174,32 +1314,33 @@
 
     // ── Xử lý Thu nhỏ/Mở rộng Sidebar (Ngang trên PC/Dọc trên Mobile) ──
     function initMobileSidebarToggle() {
-        var toggleBtn = document.getElementById('toggle-sidebar-btn');
+        var btnMobile = document.getElementById('toggle-sidebar-btn-mobile');
+        var btnDesktop = document.getElementById('toggle-sidebar-btn-desktop');
         var sidebar = document.querySelector('.map-sidebar');
         var mapLayout = document.querySelector('.map-layout');
         
-        if (toggleBtn && sidebar && mapLayout) {
-            // Thiết lập icon ban đầu dựa trên kích thước màn hình
-            var icon = toggleBtn.querySelector('.toggle-icon');
-            var isMobile = window.innerWidth <= 768;
-            if (icon) {
-                icon.textContent = isMobile ? '▼' : '◀';
-            }
-            
-            toggleBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
+        if (sidebar && mapLayout) {
+            function handleToggle(e) {
+                if (e) e.stopPropagation();
                 var isCollapsed = sidebar.classList.toggle('collapsed');
                 mapLayout.classList.toggle('sidebar-collapsed', isCollapsed);
                 
                 var isMobileNow = window.innerWidth <= 768;
-                var icon = toggleBtn.querySelector('.toggle-icon');
+                
+                // Desktop button uses text arrow icon
+                var iconDesktop = btnDesktop ? btnDesktop.querySelector('.toggle-icon') : null;
+                // Mobile pill button: update label text; arrow direction is via CSS
+                var labelMobile = btnMobile ? btnMobile.querySelector('.toggle-label') : null;
+                
                 if (isCollapsed) {
-                    icon.textContent = isMobileNow ? '▲' : '▶'; // Nhấn để mở rộng
+                    if (iconDesktop) iconDesktop.textContent = '▶';
+                    if (labelMobile) labelMobile.textContent = 'Danh sách';
                     if (typeof showToast === 'function') {
-                        showToast(isMobileNow ? 'Đã thu nhỏ thanh tìm kiếm. Bạn có thể xem bản đồ rộng hơn!' : 'Đã thu gọn thanh tìm kiếm sang trái!', 'info');
+                        showToast(isMobileNow ? 'Đã thu nhỏ. Nhấn nút bên dưới để mở lại!' : 'Đã thu gọn thanh tìm kiếm sang trái!', 'info');
                     }
                 } else {
-                    icon.textContent = isMobileNow ? '▼' : '◀'; // Nhấn để thu nhỏ
+                    if (iconDesktop) iconDesktop.textContent = '◀';
+                    if (labelMobile) labelMobile.textContent = 'Thu lại';
                 }
                 
                 // Cập nhật lại kích thước bản đồ Leaflet sau khi co giãn
@@ -1208,21 +1349,22 @@
                         map.invalidateSize({ animate: true });
                     }
                 }, 300);
-            });
+            }
             
-            // Đồng bộ hoá icon khi người dùng co giãn trình duyệt
-            window.addEventListener('resize', function() {
-                var isMobileNow = window.innerWidth <= 768;
-                var isCollapsed = sidebar.classList.contains('collapsed');
-                var icon = toggleBtn.querySelector('.toggle-icon');
-                if (icon) {
-                    if (isCollapsed) {
-                        icon.textContent = isMobileNow ? '▲' : '▶';
-                    } else {
-                        icon.textContent = isMobileNow ? '▼' : '◀';
-                    }
-                }
-            });
+            if (btnMobile) btnMobile.addEventListener('click', handleToggle);
+            if (btnDesktop) btnDesktop.addEventListener('click', handleToggle);
+            
+            // Đồng bộ hoá icon ban đầu
+            var isCollapsedInit = sidebar.classList.contains('collapsed');
+            var iconDesktop = btnDesktop ? btnDesktop.querySelector('.toggle-icon') : null;
+            var labelMobile = btnMobile ? btnMobile.querySelector('.toggle-label') : null;
+            if (isCollapsedInit) {
+                if (iconDesktop) iconDesktop.textContent = '▶';
+                if (labelMobile) labelMobile.textContent = 'Danh sách';
+            } else {
+                if (iconDesktop) iconDesktop.textContent = '◀';
+                if (labelMobile) labelMobile.textContent = 'Thu lại';
+            }
         }
     }
 
