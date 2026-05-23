@@ -2302,15 +2302,15 @@ footer.site-footer {
 .auth-page {
   min-height: 100vh;
   display: flex;
-  align-items: flex-start; /* Allow card to grow above center without being clipped */
+  align-items: center;
   justify-content: center;
   background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)),
     url('/images/auth-bg.png') no-repeat center center;
   background-size: cover;
   background-attachment: fixed;
-  padding: max(2rem, calc(50vh - 320px)) 2rem 2rem; /* Responsive top-padding keeps card centered by default */
+  padding: 2rem;
   position: relative;
-  overflow-y: auto; /* Allow scrolling when validation errors push content below viewport */
+  /* No overflow: hidden — let body scroll when validation errors push content down */
 }
 
 .auth-page::before {
