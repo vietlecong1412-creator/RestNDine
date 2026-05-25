@@ -20,6 +20,40 @@
             overflow-y: auto !important;
             height: auto !important;
         }
+        
+        .password-wrapper {
+            position: relative;
+        }
+        .btn-toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-toggle-password i {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+        .btn-toggle-password:hover i {
+            color: var(--primary);
+        }
+        
+        /* Hide Microsoft Edge / IE default eye icon for password fields */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear,
+        input::-ms-reveal,
+        input::-ms-clear {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="auth-page">
@@ -43,13 +77,23 @@
 
             <div class="form-group mb-3">
                 <label asp-for="Input.Password">Mật khẩu</label>
-                <input asp-for="Input.Password" class="form-control-custom" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                <div class="password-wrapper">
+                    <input asp-for="Input.Password" class="form-control-custom pe-5" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                    <button type="button" class="btn-toggle-password" tabindex="-1">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
                 <span asp-validation-for="Input.Password" class="text-danger small"></span>
             </div>
 
             <div class="form-group mb-4">
                 <label asp-for="Input.ConfirmPassword">Xác nhận mật khẩu</label>
-                <input asp-for="Input.ConfirmPassword" class="form-control-custom" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                <div class="password-wrapper">
+                    <input asp-for="Input.ConfirmPassword" class="form-control-custom pe-5" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                    <button type="button" class="btn-toggle-password" tabindex="-1">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
             </div>
 
@@ -103,6 +147,22 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.btn-toggle-password').click(function() {
+                const passwordInput = $(this).siblings('input');
+                const icon = $(this).find('i');
+                
+                if (passwordInput.attr('type') === 'password') {
+                    passwordInput.attr('type', 'text');
+                    icon.removeClass('fa-eye').addClass('fa-eye-slash');
+                } else {
+                    passwordInput.attr('type', 'password');
+                    icon.removeClass('fa-eye-slash').addClass('fa-eye');
+                }
+            });
+        });
+    </script>
     <partial name="_ValidationScriptsPartial" />
 </body>
 </html>

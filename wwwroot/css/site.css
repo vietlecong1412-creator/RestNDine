@@ -3803,4 +3803,12 @@ footer.site-footer {
   }
 }
 
-/* (Mobile toggle button .btn-mobile-sheet-toggle is styled in Index.cshtml inline styles) */
+/* (Mobile toggle button .btn-mobile-sheet-toggle is styled in Index.cshtml inline styles) */
+
+/* ── Hide native browser password reveal/clear buttons (Edge, IE, etc.) to prevent duplicate eye icons ── */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}

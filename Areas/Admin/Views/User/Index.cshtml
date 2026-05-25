@@ -1,0 +1,165 @@
+@model IEnumerable<DACS.Areas.Admin.Models.UserListViewModel>
+@{
+    ViewData["Title"] = "Quản lý tài khoản";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="admin-container animate-in">
+    <div class="section-header">
+        <h1 class="section-title">
+            <span>👥</span> Quản lý tài khoản người dùng
+            <span class="badge-count">@Model.Count() tài khoản</span>
+        </h1>
+    </div>
+
+    <!-- Thanh bộ lọc & Tìm kiếm -->
+    <div class="card-glass mb-4 p-3">
+        <form method="get" class="row g-3 align-items-center">
+            <div class="col-md-5">
+                <div class="position-relative">
+                    <input type="text" name="searchTerm" class="form-control-custom" 
+                           placeholder="🔍 Tìm theo địa chỉ Email..." value="@ViewBag.SearchTerm" style="padding-left: 2.5rem;" />
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <select name="roleFilter" class="form-control-custom" onchange="this.form.submit()">
+                    <option value="">👥 Tất cả chức vụ</option>
+                    <option value="Admin" selected="@(ViewBag.RoleFilter == "Admin")">🔴 Quản trị viên (Admin)</option>
+                    <option value="Owner" selected="@(ViewBag.RoleFilter == "Owner")">🟢 Chủ quán (Owner)</option>
+                    <option value="Customer" selected="@(ViewBag.RoleFilter == "Customer")">🔵 Khách hàng (Customer)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn-primary-custom w-100 justify-content-center">Lọc kết quả</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card-glass">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <div class="empty-state-title">Không tìm thấy tài khoản nào</div>
+                <div class="empty-state-desc">Hãy thử thay đổi điều kiện tìm kiếm hoặc lọc.</div>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table-custom text-nowrap">
+                    <thead>
+                        <tr>
+                            <th>Email người dùng</th>
+                            <th>Chức vụ hiện tại</th>
+                            <th>Trạng thái</th>
+                            <th>Hành động thay đổi</th>
+                            <th class="text-end">Khóa / Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong style="color:var(--text-primary)">@u.Email</strong>
+                                </td>
+                                <td>
+                                    @if (u.Role == "Admin")
+                                    {
+                                        <span class="badge" style="background:rgba(239, 68, 68, 0.12); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-weight: 600;">Admin</span>
+                                    }
+                                    else if (u.Role == "Owner")
+                                    {
+                                        <span class="badge" style="background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.2); padding: 4px 10px; border-radius: 6px; font-weight: 600;">Owner (Chủ quán)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge" style="background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.2); padding: 4px 10px; border-radius: 6px; font-weight: 600;">Customer (Khách)</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (u.IsLockedOut)
+                                    {
+                                        <span class="badge-warning-custom" style="background:rgba(239, 68, 68, 0.1); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.2);">🔒 Đã khóa</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-success-custom">✅ Hoạt động</span>
+                                    }
+                                </td>
+                                <td>
+                                    <!-- Form đổi quyền nhanh -->
+                                    <form asp-action="ChangeRole" method="post" class="d-flex align-items-center gap-2">
+                                        <input type="hidden" name="userId" value="@u.Id" />
+                                        <select name="newRole" class="form-control-custom py-1" style="font-size:0.8rem; width:150px;">
+                                            <option value="Customer" selected="@(u.Role == "Customer")">Khách hàng</option>
+                                            <option value="Owner" selected="@(u.Role == "Owner")">Chủ quán</option>
+                                            <option value="Admin" selected="@(u.Role == "Admin")">Quản trị viên</option>
+                                        </select>
+                                        <button type="submit" class="btn-success-custom py-1 px-2" style="font-size:0.75rem;">
+                                            Lưu
+                                        </button>
+                                    </form>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <!-- Khóa/Mở khóa -->
+                                        <form asp-action="ToggleLockout" method="post" style="display:inline;">
+                                            <input type="hidden" name="userId" value="@u.Id" />
+                                            @if (u.IsLockedOut)
+                                            {
+                                                <button type="submit" class="btn-success-custom py-1 px-3">
+                                                    🔓 Mở khóa
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="submit" class="btn-danger-custom py-1 px-3" style="background:#f59e0b; color:white;">
+                                                    🔒 Khóa
+                                                </button>
+                                            }
+                                        </form>
+
+                                        <!-- Xóa tài khoản -->
+                                        <button onclick="confirmDelete('@u.Id', '@u.Email')" class="btn-danger-custom py-1 px-3">
+                                            🗑 Xóa
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@* Modal Xóa *@
+<div id="deleteModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-title">Xác nhận xóa tài khoản</div>
+        <div class="modal-desc">Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản người dùng "<b id="delEmail"></b>" khỏi hệ thống không? Hành động này không thể hoàn tác.</div>
+        <div class="modal-actions">
+            <button onclick="closeDelete()" class="btn-outline-custom">Hủy</button>
+            <form id="delForm" method="post" asp-action="DeleteUser">
+                <input type="hidden" name="userId" id="delUserId" />
+                <button type="submit" class="btn-primary-custom" style="background:#ef4444;">Đồng ý xóa</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function confirmDelete(id, email) {
+        document.getElementById('delUserId').value = id;
+        document.getElementById('delEmail').textContent = email;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+    function closeDelete() {
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+</script>
+}

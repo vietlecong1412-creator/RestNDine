@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace DACS.Areas.Identity.Pages.Account
 {
@@ -29,13 +30,15 @@ namespace DACS.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<IdentityUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
+        private readonly IMemoryCache _memoryCache;
 
         public RegisterModel(
             UserManager<IdentityUser> userManager,
             IUserStore<IdentityUser> userStore,
             SignInManager<IdentityUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            IMemoryCache memoryCache)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -43,6 +46,7 @@ namespace DACS.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailSender = emailSender;
+            _memoryCache = memoryCache;
         }
 
         /// <summary>
@@ -137,26 +141,34 @@ namespace DACS.Areas.Identity.Pages.Account
                         }
 
                         var userId = await _userManager.GetUserIdAsync(user);
-                        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callbackUrl = Url.Page(
-                        "/Account/ConfirmEmail",
-                        pageHandler: null,
-                        values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-                        protocol: Request.Scheme);
+                        var cryptoToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                        // 1. Tạo mã OTP 6 chữ số ngẫu nhiên
+                        var otpCode = new Random().Next(100000, 999999).ToString();
 
-                    if (_userManager.Options.SignIn.RequireConfirmedAccount)
-                    {
-                        return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl = returnUrl });
-                    }
-                    else
-                    {
-                        await _signInManager.SignInAsync(user, isPersistent: false);
-                        return LocalRedirect(returnUrl);
-                    }
+                        // 2. Lưu OTP và Security Token vào MemoryCache với hạn sử dụng 10 phút
+                        var cacheKey = $"OTP_EmailConf_{userId}";
+                        _memoryCache.Set(cacheKey, otpCode, TimeSpan.FromMinutes(10));
+                        _memoryCache.Set($"CryptoToken_EmailConf_{userId}", cryptoToken, TimeSpan.FromMinutes(10));
+
+                        // 3. Sử dụng mẫu email HTML OTP cao cấp được thiết kế riêng cho FoodRadar
+                        var emailBody = DACS.Services.EmailTemplateHelper.GetOtpEmailHtml(otpCode, Input.Email);
+
+                        await _emailSender.SendEmailAsync(
+                            Input.Email, 
+                            "📡 Mã xác thực OTP tài khoản FoodRadar của bạn",
+                            emailBody);
+
+                        // 4. Chuyển hướng sang trang nhập mã OTP
+                        if (_userManager.Options.SignIn.RequireConfirmedAccount)
+                        {
+                            return RedirectToPage("VerifyOtp", new { userId = userId, email = Input.Email });
+                        }
+                        else
+                        {
+                            await _signInManager.SignInAsync(user, isPersistent: false);
+                            return LocalRedirect(returnUrl);
+                        }
                 }
                 foreach (var error in result.Errors)
                 {

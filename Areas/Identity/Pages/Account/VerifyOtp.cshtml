@@ -1,0 +1,142 @@
+@page
+@model VerifyOtpModel
+@{
+    ViewData["Title"] = "Xác thực OTP";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FoodRadar</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        .otp-input {
+            letter-spacing: 12px;
+            font-size: 2.25rem !important;
+            text-align: center !important;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 800;
+            max-width: 260px;
+            margin: 0 auto;
+            color: var(--primary) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 2px dashed var(--border) !important;
+            border-radius: 12px !important;
+            padding-left: 20px !important; /* adjust for letter-spacing offset */
+            transition: all 0.3s ease;
+        }
+
+        .otp-input:focus {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 15px var(--primary-glow) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .otp-logo {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary), #ea580c);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            color: white;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 8px 24px var(--primary-glow);
+            animation: pulse-logo 2s infinite ease-in-out;
+        }
+
+        @@keyframes pulse-logo {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+    </style>
+</head>
+<body class="auth-page">
+    <div class="auth-card text-center" style="max-width: 440px;">
+        <div class="auth-header">
+            <div class="otp-logo animate-in">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h1 class="auth-title animate-in">Nhập mã xác thực</h1>
+            <p class="auth-subtitle animate-in">Bảo mật tài khoản FoodRadar của bạn</p>
+        </div>
+
+        <div class="info-box animate-in" style="animation-delay: 0.1s;">
+            <p class="text-white small mb-2 font-weight-bold">
+                <i class="fa-solid fa-envelope text-primary me-2"></i> Xác thực Email
+            </p>
+            <p class="text-secondary small mb-0" style="line-height: 1.5;">
+                Chúng tôi vừa gửi mã OTP gồm 6 chữ số đến hộp thư:<br/>
+                <strong class="text-primary">@Model.Email</strong> <br/>
+                Vui lòng nhập mã để hoàn tất đăng ký.
+            </p>
+        </div>
+
+        <form method="post" class="auth-form animate-in" style="animation-delay: 0.15s;">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+            <input asp-for="Input.UserId" type="hidden" />
+
+            <div class="form-group mb-4">
+                <input asp-for="Input.OtpCode" class="form-control otp-input" 
+                       autocomplete="off" maxlength="6" placeholder="••••••" required />
+                <span asp-validation-for="Input.OtpCode" class="text-danger small d-block mt-2"></span>
+            </div>
+
+            <button type="submit" class="w-100 btn-primary-custom py-2 justify-content-center mb-3">
+                Xác nhận kích hoạt <i class="fa-solid fa-circle-check ms-2"></i>
+            </button>
+        </form>
+
+        <!-- Form gửi lại mã -->
+        <div class="animate-in" style="animation-delay: 0.2s;">
+            <form method="post" asp-page-handler="ResendOtp" asp-route-userId="@Model.UserId" style="display:inline;">
+                <p class="text-secondary small">
+                    Không nhận được mã? 
+                    <button type="submit" class="btn btn-link p-0 text-primary text-decoration-none small" 
+                            style="font-weight: 600; font-size: 0.85rem; vertical-align: baseline;">
+                        Gửi lại mã OTP
+                    </button>
+                </p>
+            </form>
+            
+            <a asp-page="./Register" class="text-decoration-none small text-muted hover-light" style="transition: color 0.2s;">
+                <i class="fa-solid fa-arrow-left me-1"></i> Quay lại Đăng ký
+            </a>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            // Tự động focus vào ô OTP khi mở trang
+            $('.otp-input').focus();
+
+            // Chỉ cho phép nhập số
+            $('.otp-input').on('keypress', function(e) {
+                if (e.which < 48 || e.which > 57) {
+                    return false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

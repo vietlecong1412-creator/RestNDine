@@ -46,7 +46,7 @@
                     @if (User.IsInRole("Admin"))
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
+                            <a class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Admin" && ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
                                asp-area="Admin" asp-controller="Restaurant" asp-action="Index">
                                 ⚙️ Quản lý
                                 <span class="badge-admin">Admin</span>
@@ -58,8 +58,14 @@
                                 🧾 Duyệt Banner
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Admin" && ViewContext.RouteData.Values["controller"]?.ToString() == "User" ? "active" : "")"
+                               asp-area="Admin" asp-controller="User" asp-action="Index">
+                                👥 Quản lý tài khoản
+                            </a>
+                        </li>
                     }
-                    @if (User.IsInRole("Owner") || User.IsInRole("Admin"))
+                    @if (User.IsInRole("Owner"))
                     {
                         <li class="nav-item">
                             <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
@@ -73,21 +79,18 @@
                                 🏨 Thêm khách sạn
                             </a>
                         </li>
-                        @if (User.IsInRole("Owner"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "MyRestaurants" ? "active" : "")"
-                                   asp-area="" asp-controller="Restaurant" asp-action="MyRestaurants">
-                                    📋 Quán của tôi
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Hotel" && ViewContext.RouteData.Values["action"]?.ToString() == "MyHotels" ? "active" : "")"
-                                   asp-area="" asp-controller="Hotel" asp-action="MyHotels">
-                                    📋 Khách sạn của tôi
-                                </a>
-                            </li>
-                        }
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "MyRestaurants" ? "active" : "")"
+                               asp-area="" asp-controller="Restaurant" asp-action="MyRestaurants">
+                                📋 Quán của tôi
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Hotel" && ViewContext.RouteData.Values["action"]?.ToString() == "MyHotels" ? "active" : "")"
+                               asp-area="" asp-controller="Hotel" asp-action="MyHotels">
+                                📋 Khách sạn của tôi
+                            </a>
+                        </li>
                     }
                 </ul>
 

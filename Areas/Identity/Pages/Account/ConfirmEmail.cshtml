@@ -1,0 +1,129 @@
+@page
+@model ConfirmEmailModel
+@{
+    ViewData["Title"] = "Xác nhận Email";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FoodRadar</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        .success-logo {
+            width: 75px;
+            height: 75px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+            animation: bounce-check 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+
+        .error-logo {
+            width: 75px;
+            height: 75px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+            animation: shake-error 0.5s ease-in-out both;
+        }
+
+        @@keyframes bounce-check {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @@keyframes shake-error {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .status-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="auth-page">
+    <div class="auth-card text-center" style="max-width: 440px;">
+        @if (Model.Succeeded)
+        {
+            <div class="auth-header">
+                <div class="success-logo">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h1 class="auth-title text-success">Kích hoạt thành công!</h1>
+                <p class="auth-subtitle">Chào mừng bạn gia nhập cộng đồng FoodRadar</p>
+            </div>
+
+            <div class="status-box animate-in" style="animation-delay: 0.1s;">
+                <p class="text-white small mb-3">
+                    Tài khoản email:<br/>
+                    <strong class="text-primary">@Model.UserEmail</strong>
+                </p>
+                <p class="text-secondary small mb-0" style="line-height: 1.6;">
+                    Chúc mừng! Tài khoản của bạn đã được xác thực hoàn tất. Giờ đây bạn đã có toàn quyền truy cập để tìm kiếm các địa điểm ẩm thực, đánh giá nhà hàng, khách sạn và các tính năng thú vị khác trên hệ thống.
+                </p>
+            </div>
+
+            <div class="animate-in" style="animation-delay: 0.2s;">
+                <a asp-page="./Login" class="btn-primary-custom w-100 py-2 justify-content-center text-decoration-none d-flex align-items-center mb-3">
+                    Đăng nhập ngay <i class="fa-solid fa-arrow-right ms-2"></i>
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="auth-header">
+                <div class="error-logo">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </div>
+                <h1 class="auth-title text-danger">Xác thực thất bại</h1>
+                <p class="auth-subtitle">Đã xảy ra lỗi trong quá trình kích hoạt</p>
+            </div>
+
+            <div class="status-box animate-in" style="animation-delay: 0.1s;">
+                <p class="text-secondary small mb-0" style="line-height: 1.6;">
+                    @Model.StatusMessage <br/>
+                    Liên kết xác nhận có thể đã hết hạn, đã được sử dụng trước đó, hoặc mã token không chính xác. Vui lòng thử đăng ký lại hoặc yêu cầu gửi lại link kích hoạt mới từ trang Đăng nhập.
+                </p>
+            </div>
+
+            <div class="animate-in" style="animation-delay: 0.2s;">
+                <a asp-page="./Register" class="btn-primary-custom w-100 py-2 justify-content-center text-decoration-none d-flex align-items-center mb-3">
+                    Đăng ký lại <i class="fa-solid fa-arrow-right ms-2"></i>
+                </a>
+                
+                <a href="/" class="text-decoration-none small text-muted hover-light" style="transition: color 0.2s;">
+                    <i class="fa-solid fa-house me-1"></i> Quay về Trang chủ
+                </a>
+            </div>
+        }
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

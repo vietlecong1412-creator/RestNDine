@@ -4,6 +4,22 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<style>
+    .address-cell {
+        white-space: normal !important;
+        max-width: 320px;
+        min-width: 200px;
+        line-height: 1.5;
+        color: var(--text-secondary);
+    }
+    .name-cell {
+        white-space: normal !important;
+        max-width: 200px;
+        min-width: 130px;
+        line-height: 1.5;
+    }
+</style>
+
 <div class="admin-container animate-in">
     <div class="section-header">
         <h1 class="section-title">
@@ -45,8 +61,8 @@
                         {
                             <tr>
                                 <td style="color:var(--text-muted)">#@r.Id</td>
-                                <td><strong style="color:var(--text-primary)">@r.Name</strong></td>
-                                <td>@(string.IsNullOrEmpty(r.Address) ? "—" : r.Address)</td>
+                                <td class="name-cell"><strong style="color:var(--text-primary)">@r.Name</strong></td>
+                                <td class="address-cell">@(string.IsNullOrEmpty(r.Address) ? "—" : r.Address)</td>
                                 <td><span class="price-badge">@(string.IsNullOrEmpty(r.PriceRange) ? "Chưa có" : r.PriceRange)</span></td>
                                 <td>
                                     @if (r.IsApproved)

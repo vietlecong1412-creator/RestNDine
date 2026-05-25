@@ -55,7 +55,22 @@ namespace DACS.Data
             string email, string password, string role)
         {
             var user = await userManager.FindByEmailAsync(email);
-            if (user != null) return;
+            if (user != null)
+            {
+                // Đảm bảo các tài khoản seed mẫu luôn có EmailConfirmed = true
+                if (!user.EmailConfirmed)
+                {
+                    user.EmailConfirmed = true;
+                    await userManager.UpdateAsync(user);
+                }
+                
+                // Đảm bảo gán đúng quyền tài khoản
+                if (!await userManager.IsInRoleAsync(user, role))
+                {
+                    await userManager.AddToRoleAsync(user, role);
+                }
+                return;
+            }
 
             user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true };
             var result = await userManager.CreateAsync(user, password);

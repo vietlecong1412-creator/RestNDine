@@ -26,3 +26,4 @@ venv/
 # Data & Large Files
 # ==========================================
 comments_dataset.csv
+wwwroot/sent_emails/
