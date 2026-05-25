@@ -95,8 +95,8 @@ namespace DACS.Areas.Identity.Pages.Account
                             _memoryCache.Remove(cacheKey);
                             _memoryCache.Remove(tokenKey);
 
-                            TempData["Success"] = "Xác thực tài khoản thành công!";
-                            return RedirectToPage("./ConfirmEmail", new { userId = user.Id, code = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(System.Text.Encoding.UTF8.GetBytes(cryptoToken)) });
+                            TempData["Success"] = "🎉 Tài khoản đã được xác thực thành công! Hãy đăng nhập để tiếp tục.";
+                            return RedirectToPage("./Login");
                         }
                         
                         foreach (var error in result.Errors)
