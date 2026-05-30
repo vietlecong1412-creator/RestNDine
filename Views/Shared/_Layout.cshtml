@@ -24,8 +24,9 @@
         <div class="container-fluid" style="max-width:1280px; margin:0 auto; padding:0 1.5rem;">
 
             @* Brand *@
-            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                📡 RestNDine
+            <a class="navbar-brand d-flex align-items-center gap-2" asp-area="" asp-controller="Home" asp-action="Index">
+                <img src="/images/logo.png" alt="RestNDine Logo" style="height: 32px; width: 32px; border-radius: 6px; object-fit: cover;" />
+                <span>RestNDine</span>
             </a>
 
             <button class="navbar-toggler" type="button"
@@ -109,7 +110,10 @@
 <footer class="site-footer">
     <div class="footer-inner">
         <div style="display:flex; align-items:center; gap:.5rem;">
-            <span class="footer-brand">📡 RestNDine</span>
+            <span class="footer-brand d-flex align-items-center gap-2">
+                <img src="/images/logo.png" alt="RestNDine Logo" style="height: 24px; width: 24px; border-radius: 4px; object-fit: cover;" />
+                <span>RestNDine</span>
+            </span>
             <span style="color:var(--border)">|</span>
             <span>&copy; 2026 — Bản đồ địa điểm ăn uống & khách sạn</span>
         </div>
