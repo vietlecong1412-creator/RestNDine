@@ -1,4 +1,4 @@
-@model DACS.Models.Restaurant
+@model DACS.Models.Place
 @{
     ViewData["Title"] = "Thanh toán phí quảng cáo – " + Model.Name;
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -638,7 +638,7 @@
             <!-- Step 1: confirm paid -->
             <div id="confirmStep">
                 <div class="action-row">
-                    <a href="@Url.Action("Details", "Restaurant", new { id = Model.Id })" class="btn-back">
+                    <a href="@Url.Action("Details", "Place", new { id = Model.Id })" class="btn-back">
                         <i class="fa-solid fa-arrow-left"></i> Quay lại
                     </a>
                     <button type="button" class="btn-paid" id="btnPaid" onclick="revealUpload()">
@@ -656,7 +656,7 @@
                 </div>
 
                 <form method="post" enctype="multipart/form-data"
-                      action="@Url.Action("UpdateBanner", "Restaurant")"
+                      action="@Url.Action("UpdateBanner", "Place")"
                       id="uploadForm" onsubmit="handleSubmit(event)">
                     <input type="hidden" name="id" value="@Model.Id" />
 

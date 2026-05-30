@@ -4,12 +4,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DACS.Models
 {
-    public class Comment
+    public class PlaceComment
     {
         public int Id { get; set; }
 
         [Required]
-        public string Content { get; set; }
+        public string Content { get; set; } = string.Empty;
 
         /// <summary>Đánh giá sao: 1–5</summary>
         [Range(1, 5)]
@@ -18,13 +18,13 @@ namespace DACS.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [Required]
-        public int RestaurantId { get; set; }
+        public int PlaceId { get; set; }
 
-        [ForeignKey("RestaurantId")]
-        public virtual Restaurant? Restaurant { get; set; }
+        [ForeignKey("PlaceId")]
+        public virtual Place? Place { get; set; }
 
         [Required]
-        public string UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
 
         [ForeignKey("UserId")]
         public virtual IdentityUser? User { get; set; }

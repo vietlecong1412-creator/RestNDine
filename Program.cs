@@ -29,8 +29,7 @@ builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSe
 builder.Services.AddRazorPages();
 builder.Services.AddMemoryCache();
 
-builder.Services.AddScoped<IRestaurantRepository, RestaurantRepository>();
-builder.Services.AddScoped<IHotelRepository, HotelRepository>();
+builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<IAiSummaryService, LocalAiSummaryService>();
 
 builder.Services.AddControllersWithViews();

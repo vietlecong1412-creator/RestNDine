@@ -1,0 +1,144 @@
+@model DACS.Models.Place
+@{
+    ViewData["Title"] = "Thêm địa điểm";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="admin-container animate-in">
+    <div class="section-header">
+        <h1 class="section-title"><span class="icon">➕</span> Thêm địa điểm mới</h1>
+        <a asp-action="Index" class="btn-outline-custom">⬅️ Quay lại</a>
+    </div>
+
+    <div class="card-glass p-0">
+        <div class="row g-0">
+            <div class="col-md-6 border-end" style="border-color:var(--border)!important">
+                <form asp-action="Create" enctype="multipart/form-data" class="p-4 p-md-5">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-4">
+                        <label asp-for="Name" class="form-label-custom">Tên địa điểm *</label>
+                        <input asp-for="Name" class="form-control-custom" placeholder="Nhập tên..." />
+                        <span asp-validation-for="Name" class="text-danger small mt-1 d-block"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="CategoryId" class="form-label-custom">Loại hình *</label>
+                        <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-control-custom" id="categorySelect">
+                            <option value="">-- Chọn loại --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="PhoneNumber" class="form-label-custom">Số điện thoại</label>
+                        <input asp-for="PhoneNumber" class="form-control-custom" placeholder="VD: 0901234567..." />
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="PriceRange" class="form-label-custom">Tầm giá</label>
+                        <input asp-for="PriceRange" class="form-control-custom" placeholder="VD: 50k - 200k" />
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Address" class="form-label-custom">Địa chỉ</label>
+                        <input asp-for="Address" class="form-control-custom" placeholder="123 Lê Lợi..." />
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <label asp-for="Latitude" class="form-label-custom">Vĩ độ (Lat)</label>
+                            <input asp-for="Latitude" id="lat" class="form-control-custom" placeholder="10.8231" readonly />
+                        </div>
+                        <div class="col-6">
+                            <label asp-for="Longitude" class="form-label-custom">Kinh độ (Lng)</label>
+                            <input asp-for="Longitude" id="lng" class="form-control-custom" placeholder="106.6297" readonly />
+                        </div>
+                    </div>
+
+                    @* Hotel-specific fields *@
+                    <div id="hotelFields" style="display:none;">
+                        <div class="mb-4 p-3" style="background:rgba(59,130,246,.05);border:1px dashed rgba(59,130,246,.3);border-radius:12px;">
+                            <div class="mb-3">
+                                <label asp-for="StarRating" class="form-label-custom">🌟 Số sao (1-5)</label>
+                                <select asp-for="StarRating" class="form-control-custom">
+                                    <option value="">-- Chọn --</option>
+                                    @for (int i = 1; i <= 5; i++) { <option value="@i">@i ⭐</option> }
+                                </select>
+                            </div>
+                            <div class="mb-0">
+                                <label asp-for="Amenities" class="form-label-custom">🏨 Tiện ích</label>
+                                <textarea asp-for="Amenities" class="form-control-custom" rows="2" placeholder="VD: Free Wifi, Hồ bơi..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Description" class="form-label-custom">Mô tả thêm</label>
+                        <textarea asp-for="Description" class="form-control-custom" rows="3" placeholder="Ghi chú..."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label-custom">Hình ảnh đại diện</label>
+                        <input type="file" name="image" id="imageInput" class="form-control-custom" accept="image/*" />
+                        <div class="mt-2 text-center" style="display:none;" id="imagePreviewContainer">
+                            <img id="imagePreview" src="" alt="Preview"
+                                 style="max-width:100%;height:auto;border-radius:10px;max-height:200px;object-fit:cover;border:1px solid var(--border);" />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary-custom w-100 justify-content-center">💾 Lưu địa điểm</button>
+                    <div class="text-center mt-3 text-muted small">Latitude & Longitude tự điền khi click bản đồ</div>
+                </form>
+            </div>
+
+            <div class="col-md-6 p-4 p-md-5 d-flex flex-column">
+                <label class="form-label-custom">Chọn vị trí trên bản đồ</label>
+                <div class="mini-map-wrapper flex-grow-1" style="min-height:450px;">
+                    <div id="mini-map" style="height:100%;min-height:450px;"></div>
+                </div>
+                <div class="mini-map-tip mt-3">
+                    <span style="font-size:1.2rem">👆</span>
+                    <span>Click vào bản đồ để thả ghim 📍</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    var categorySelect = document.getElementById('categorySelect');
+    var hotelFields = document.getElementById('hotelFields');
+    function updateFields() {
+        var t = categorySelect.options[categorySelect.selectedIndex]?.text?.toLowerCase() ?? '';
+        hotelFields.style.display = (t.includes('khách sạn') || t.includes('hotel')) ? 'block' : 'none';
+    }
+    categorySelect.addEventListener('change', updateFields);
+
+    var map = L.map('mini-map').setView([10.8231, 106.6297], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+    setTimeout(function(){map.invalidateSize();},500);
+    new ResizeObserver(function(){map.invalidateSize();}).observe(document.getElementById('mini-map'));
+
+    var marker=null;
+    var latInput=document.getElementById('lat');
+    var lngInput=document.getElementById('lng');
+    map.on('click',function(e){
+        latInput.value=e.latlng.lat.toFixed(6);lngInput.value=e.latlng.lng.toFixed(6);
+        if(marker){marker.setLatLng(e.latlng);}else{marker=L.marker(e.latlng).addTo(map);}
+    });
+    if(latInput.value&&lngInput.value){
+        var lat=parseFloat(latInput.value),lng=parseFloat(lngInput.value);
+        if(!isNaN(lat)&&!isNaN(lng)){marker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],15);}
+    }
+    document.getElementById('imageInput').addEventListener('change',function(e){
+        var p=document.getElementById('imagePreviewContainer'),img=document.getElementById('imagePreview');
+        if(e.target.files&&e.target.files[0]){var r=new FileReader();r.onload=function(ev){img.src=ev.target.result;p.style.display='block';};r.readAsDataURL(e.target.files[0]);}
+        else{p.style.display='none';}
+    });
+</script>
+}

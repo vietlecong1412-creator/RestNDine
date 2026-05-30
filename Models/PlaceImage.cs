@@ -3,16 +3,16 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DACS.Models
 {
-    public class HotelImage
+    public class PlaceImage
     {
         public int Id { get; set; }
 
         [Required]
         public string ImageUrl { get; set; } = string.Empty;
 
-        public int HotelId { get; set; }
+        public int PlaceId { get; set; }
 
-        [ForeignKey("HotelId")]
-        public Hotel? Hotel { get; set; }
+        [ForeignKey("PlaceId")]
+        public virtual Place? Place { get; set; }
     }
 }

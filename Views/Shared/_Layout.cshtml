@@ -46,15 +46,15 @@
                     @if (User.IsInRole("Admin"))
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Admin" && ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
-                               asp-area="Admin" asp-controller="Restaurant" asp-action="Index">
+                            <a class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Admin" && ViewContext.RouteData.Values["controller"]?.ToString() == "Place" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
+                               asp-area="Admin" asp-controller="Place" asp-action="Index">
                                 ⚙️ Quản lý
                                 <span class="badge-admin">Admin</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "BannerRequests" ? "active" : "")"
-                               asp-area="Admin" asp-controller="Restaurant" asp-action="BannerRequests">
+                            <a class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Admin" && ViewContext.RouteData.Values["controller"]?.ToString() == "Place" && ViewContext.RouteData.Values["action"]?.ToString() == "BannerRequests" ? "active" : "")"
+                               asp-area="Admin" asp-controller="Place" asp-action="BannerRequests">
                                 🧾 Duyệt Banner
                             </a>
                         </li>
@@ -68,27 +68,15 @@
                     @if (User.IsInRole("Owner"))
                     {
                         <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
-                               asp-area="" asp-controller="Restaurant" asp-action="Create">
-                                🍴 Thêm nhà hàng
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Place" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
+                               asp-area="" asp-controller="Place" asp-action="Create">
+                                🍴 Thêm địa điểm
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Hotel" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
-                               asp-area="" asp-controller="Hotel" asp-action="Create">
-                                🏨 Thêm khách sạn
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Restaurant" && ViewContext.RouteData.Values["action"]?.ToString() == "MyRestaurants" ? "active" : "")"
-                               asp-area="" asp-controller="Restaurant" asp-action="MyRestaurants">
-                                📋 Quán của tôi
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Hotel" && ViewContext.RouteData.Values["action"]?.ToString() == "MyHotels" ? "active" : "")"
-                               asp-area="" asp-controller="Hotel" asp-action="MyHotels">
-                                📋 Khách sạn của tôi
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Place" && ViewContext.RouteData.Values["action"]?.ToString() == "MyPlaces" ? "active" : "")"
+                               asp-area="" asp-controller="Place" asp-action="MyPlaces">
+                                📋 Địa điểm của tôi
                             </a>
                         </li>
                     }

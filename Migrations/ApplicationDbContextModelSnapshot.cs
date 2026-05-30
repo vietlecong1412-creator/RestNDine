@@ -22,41 +22,7 @@ namespace DACS.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("DACS.Models.Comment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RestaurantId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RestaurantId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Comments");
-                });
-
-            modelBuilder.Entity("DACS.Models.Hotel", b =>
+            modelBuilder.Entity("DACS.Models.Place", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -65,7 +31,6 @@ namespace DACS.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Amenities")
@@ -77,8 +42,10 @@ namespace DACS.Migrations
                     b.Property<string>("BannerUrl")
                         .HasColumnType("text");
 
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("ImageUrl")
@@ -109,17 +76,44 @@ namespace DACS.Migrations
                     b.Property<string>("PriceRange")
                         .HasColumnType("text");
 
-                    b.Property<int>("StarRating")
+                    b.Property<int?>("StarRating")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("Hotels");
+                    b.ToTable("Places");
                 });
 
-            modelBuilder.Entity("DACS.Models.HotelComment", b =>
+            modelBuilder.Entity("DACS.Models.PlaceCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlaceCategories");
+                });
+
+            modelBuilder.Entity("DACS.Models.PlaceComment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -134,7 +128,7 @@ namespace DACS.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("HotelId")
+                    b.Property<int>("PlaceId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Rating")
@@ -146,96 +140,14 @@ namespace DACS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("HotelId");
+                    b.HasIndex("PlaceId");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("HotelComments");
+                    b.ToTable("PlaceComments");
                 });
 
-            modelBuilder.Entity("DACS.Models.HotelImage", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("HotelId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HotelId");
-
-                    b.ToTable("HotelImages");
-                });
-
-            modelBuilder.Entity("DACS.Models.Restaurant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("BannerStatus")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("BannerUrl")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsCafe")
-                        .HasColumnType("boolean");
-
-                    b.Property<double>("Latitude")
-                        .HasColumnType("double precision");
-
-                    b.Property<double>("Longitude")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentProofUrl")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PriceRange")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
-
-                    b.ToTable("Restaurants");
-                });
-
-            modelBuilder.Entity("DACS.Models.RestaurantImage", b =>
+            modelBuilder.Entity("DACS.Models.PlaceImage", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -247,14 +159,14 @@ namespace DACS.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("RestaurantId")
+                    b.Property<int>("PlaceId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RestaurantId");
+                    b.HasIndex("PlaceId");
 
-                    b.ToTable("RestaurantImages");
+                    b.ToTable("PlaceImages");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -453,11 +365,28 @@ namespace DACS.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("DACS.Models.Comment", b =>
+            modelBuilder.Entity("DACS.Models.Place", b =>
                 {
-                    b.HasOne("DACS.Models.Restaurant", "Restaurant")
+                    b.HasOne("DACS.Models.PlaceCategory", "Category")
+                        .WithMany("Places")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId");
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("DACS.Models.PlaceComment", b =>
+                {
+                    b.HasOne("DACS.Models.Place", "Place")
                         .WithMany("Comments")
-                        .HasForeignKey("RestaurantId")
+                        .HasForeignKey("PlaceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -467,68 +396,20 @@ namespace DACS.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Restaurant");
+                    b.Navigation("Place");
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("DACS.Models.Hotel", b =>
+            modelBuilder.Entity("DACS.Models.PlaceImage", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId");
-
-                    b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("DACS.Models.HotelComment", b =>
-                {
-                    b.HasOne("DACS.Models.Hotel", "Hotel")
-                        .WithMany("Comments")
-                        .HasForeignKey("HotelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Hotel");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("DACS.Models.HotelImage", b =>
-                {
-                    b.HasOne("DACS.Models.Hotel", "Hotel")
+                    b.HasOne("DACS.Models.Place", "Place")
                         .WithMany("Images")
-                        .HasForeignKey("HotelId")
+                        .HasForeignKey("PlaceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Hotel");
-                });
-
-            modelBuilder.Entity("DACS.Models.Restaurant", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId");
-
-                    b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("DACS.Models.RestaurantImage", b =>
-                {
-                    b.HasOne("DACS.Models.Restaurant", "Restaurant")
-                        .WithMany("Images")
-                        .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Restaurant");
+                    b.Navigation("Place");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -582,18 +463,16 @@ namespace DACS.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("DACS.Models.Hotel", b =>
+            modelBuilder.Entity("DACS.Models.Place", b =>
                 {
                     b.Navigation("Comments");
 
                     b.Navigation("Images");
                 });
 
-            modelBuilder.Entity("DACS.Models.Restaurant", b =>
+            modelBuilder.Entity("DACS.Models.PlaceCategory", b =>
                 {
-                    b.Navigation("Comments");
-
-                    b.Navigation("Images");
+                    b.Navigation("Places");
                 });
 #pragma warning restore 612, 618
         }

@@ -141,17 +141,12 @@ namespace DACS.Areas.Admin.Controllers
 
             try
             {
-                // 1. Xóa toàn bộ NHÀ HÀNG sở hữu bởi người dùng này
-                // (Các hình ảnh RestaurantImages và bình luận Comments thuộc nhà hàng sẽ tự động xóa Cascade nhờ ràng buộc khóa ngoại ở DB)
-                var ownedRestaurants = _context.Restaurants.Where(r => r.OwnerId == userId);
-                _context.Restaurants.RemoveRange(ownedRestaurants);
+                // Xóa toàn bộ ĐỊA ĐIỂM sở hữu bởi người dùng này
+                // (Các hình ảnh PlaceImages và bình luận PlaceComments thuộc địa điểm sẽ tự động xóa Cascade nhờ ràng buộc khóa ngoại ở DB)
+                var ownedPlaces = _context.Places.Where(p => p.OwnerId == userId);
+                _context.Places.RemoveRange(ownedPlaces);
 
-                // 2. Xóa toàn bộ KHÁCH SẠN sở hữu bởi người dùng này
-                // (Các hình ảnh HotelImages và bình luận HotelComments thuộc khách sạn sẽ tự động xóa Cascade nhờ ràng buộc khóa ngoại ở DB)
-                var ownedHotels = _context.Hotels.Where(h => h.OwnerId == userId);
-                _context.Hotels.RemoveRange(ownedHotels);
-
-                // Áp dụng các thay đổi xóa nhà hàng/khách sạn sở hữu trước
+                // Áp dụng các thay đổi xóa địa điểm sở hữu trước
                 await _context.SaveChangesAsync();
 
                 // 3. Tiến hành xóa tài khoản người dùng

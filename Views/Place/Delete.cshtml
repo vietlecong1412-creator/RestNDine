@@ -1,0 +1,32 @@
+@model DACS.Models.Place
+@{
+    ViewData["Title"] = "Xóa địa điểm";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="admin-container animate-in">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card-glass border-danger p-4 p-md-5 text-center mt-5">
+                <div style="font-size:4rem;margin-bottom:1rem;color:#ef4444;">⚠️</div>
+                <h2 class="section-title text-danger mb-4" style="font-size:1.8rem;">Xác nhận xóa địa điểm</h2>
+                <p style="color:var(--text-secondary);font-size:1.1rem;" class="mb-4">
+                    Bạn sắp xóa vĩnh viễn <strong>@Model.Name</strong> khỏi hệ thống cùng toàn bộ bình luận.
+                    Hành động này <b>không thể hoàn tác</b>.
+                </p>
+                <div class="d-flex flex-column gap-3 mt-5">
+                    <form asp-action="Delete" method="post">
+                        <input type="hidden" asp-for="Id" />
+                        <button type="submit" class="btn-primary-custom w-100 justify-content-center"
+                                style="background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.3);">
+                            🗑️ Xác nhận xóa vĩnh viễn
+                        </button>
+                    </form>
+                    <a asp-action="MyPlaces" class="btn-outline-custom w-100 justify-content-center text-decoration-none">
+                        ⬅️ Hủy bỏ, quay về
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

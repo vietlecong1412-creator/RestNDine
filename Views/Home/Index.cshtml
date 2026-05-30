@@ -128,10 +128,10 @@
                 @if (User.IsInRole("Owner") || User.IsInRole("Admin"))
                 {
                     <div class="d-flex gap-2 mb-3">
-                        <a asp-controller="Restaurant" asp-action="Create" class="btn-primary-custom w-50 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px;">
+                        <a asp-controller="Place" asp-action="Create" asp-route-categoryId="1" class="btn-primary-custom w-50 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px;">
                             🍴 Thêm nhà hàng
                         </a>
-                        <a asp-controller="Hotel" asp-action="Create" class="btn-primary-custom w-50 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border: none;">
+                        <a asp-controller="Place" asp-action="Create" asp-route-categoryId="2" class="btn-primary-custom w-50 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border: none;">
                             🏨 Thêm khách sạn
                         </a>
                     </div>
@@ -315,16 +315,15 @@
 <script>
 (function () {
     // ── Combined Data ──
-    var restaurants = @Html.Raw(Json.Serialize(Model.Restaurants)) || [];
-    restaurants.forEach(function(x) { 
-        x.itemType = 'restaurant'; 
-        x.isCafe = !!x.isCafe; 
+    var allPlaces = @Html.Raw(Json.Serialize(Model.Places)) || [];
+    allPlaces.forEach(function(x) {
+        if (x.categoryId === 2) {
+            x.itemType = 'hotel';
+        } else {
+            x.itemType = 'restaurant';
+            x.isCafe = (x.categoryId === 3);
+        }
     });
-
-    var hotels = @Html.Raw(Json.Serialize(Model.Hotels)) || [];
-    hotels.forEach(function(x) { x.itemType = 'hotel'; });
-
-    var allPlaces = restaurants.concat(hotels);
 
     // ── Map init ──
     var map = L.map('map', { zoomControl: false, tap: false }).setView([10.852, 106.761], 13);
@@ -707,8 +706,7 @@
         }
         
         // Full details page button
-        var controllerName = r.itemType === 'hotel' ? 'Hotel' : 'Restaurant';
-        document.getElementById('btn-full-details').href = '/' + controllerName + '/Details/' + r.id;
+        document.getElementById('btn-full-details').href = '/Place/Details/' + r.id;
         
         // Copy address button
         var copyBtn = document.getElementById('btn-copy-address');

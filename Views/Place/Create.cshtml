@@ -1,0 +1,220 @@
+@model DACS.Models.Place
+@{
+    ViewData["Title"] = "Thêm địa điểm mới";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="admin-container animate-in">
+    <div class="section-header">
+        <h1 class="section-title">
+            <span class="icon">➕</span> Gửi yêu cầu thêm địa điểm
+        </h1>
+        <a asp-action="Index" asp-controller="Home" class="btn-outline-custom">⬅️ Quay lại map</a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert-glass success mb-4">✅ @TempData["Success"]</div>
+    }
+
+    <div class="card-glass p-0">
+        <div class="row g-0">
+            @* ── Left Form ── *@
+            <div class="col-md-6 border-end" style="border-color:var(--border)!important">
+                <form asp-action="Create" enctype="multipart/form-data" class="p-4 p-md-5">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-4">
+                        <label asp-for="Name" class="form-label-custom">Tên địa điểm *</label>
+                        <input asp-for="Name" class="form-control-custom" placeholder="Nhập tên địa điểm..." />
+                        <span asp-validation-for="Name" class="text-danger small mt-1 d-block"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="CategoryId" class="form-label-custom">Loại hình địa điểm *</label>
+                        <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-control-custom" id="categorySelect">
+                            <option value="">-- Chọn loại --</option>
+                        </select>
+                        <span asp-validation-for="CategoryId" class="text-danger small mt-1 d-block"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="PhoneNumber" class="form-label-custom">Số điện thoại liên hệ</label>
+                        <input asp-for="PhoneNumber" class="form-control-custom" placeholder="VD: 0901234567..." />
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="PriceRange" class="form-label-custom">Tầm giá (VD: 50k - 200k)</label>
+                        <input asp-for="PriceRange" class="form-control-custom" placeholder="Nhập khoảng giá..." />
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Address" class="form-label-custom">Địa chỉ chi tiết</label>
+                        <input asp-for="Address" class="form-control-custom" placeholder="Ví dụ: 123 Lê Lợi..." />
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <label asp-for="Latitude" class="form-label-custom">Vĩ độ (Lat)</label>
+                            <input asp-for="Latitude" id="lat" class="form-control-custom" placeholder="10.8231" readonly />
+                        </div>
+                        <div class="col-6">
+                            <label asp-for="Longitude" class="form-label-custom">Kinh độ (Lng)</label>
+                            <input asp-for="Longitude" id="lng" class="form-control-custom" placeholder="106.6297" readonly />
+                        </div>
+                    </div>
+
+                    @* Hotel-specific fields (hidden by default) *@
+                    <div id="hotelFields" style="display:none;">
+                        <div class="mb-4 p-3" style="background:rgba(59,130,246,.05);border:1px dashed rgba(59,130,246,.3);border-radius:12px;">
+                            <div class="mb-3">
+                                <label asp-for="StarRating" class="form-label-custom">🌟 Số sao khách sạn (1-5)</label>
+                                <select asp-for="StarRating" class="form-control-custom">
+                                    <option value="">-- Chọn hạng sao --</option>
+                                    @for (int i = 1; i <= 5; i++) { <option value="@i">@i ⭐</option> }
+                                </select>
+                            </div>
+                            <div class="mb-0">
+                                <label asp-for="Amenities" class="form-label-custom">🏨 Tiện ích</label>
+                                <textarea asp-for="Amenities" class="form-control-custom" rows="2"
+                                          placeholder="VD: Free Wifi, Hồ bơi, Máy lạnh, Buffet..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Description" class="form-label-custom">Mô tả thêm</label>
+                        <textarea asp-for="Description" class="form-control-custom" rows="3"
+                                  placeholder="Ghi chú về địa điểm này..."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label-custom">Hình ảnh đại diện</label>
+                        <div class="drag-drop-zone" id="dragDropZone">
+                            <span class="drag-drop-icon">☁️</span>
+                            <span class="drag-drop-text">Kéo thả hình ảnh vào đây hoặc nhấp để chọn</span>
+                            <span class="drag-drop-subtext">Hỗ trợ: PNG, JPG, JPEG, WEBP</span>
+                            <input type="file" name="image" id="imageInput" class="d-none" accept="image/*" />
+                        </div>
+                        <div class="mt-3 text-center" style="display:none;" id="imagePreviewContainer">
+                            <img id="imagePreview" src="" alt="Preview"
+                                 style="max-width:100%;height:auto;border-radius:10px;max-height:200px;object-fit:cover;border:1px solid var(--border);" />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary-custom w-100 justify-content-center">
+                        💾 Gửi yêu cầu xét duyệt
+                    </button>
+                    <div class="text-center mt-3 text-muted small">
+                        Latitude & Longitude sẽ tự động điền khi click trên bản đồ
+                    </div>
+                </form>
+            </div>
+
+            @* ── Right Mini Map ── *@
+            <div class="col-md-6 p-4 p-md-5 d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <label class="form-label-custom mb-0">Chọn vị trí trên bản đồ</label>
+                    <button type="button" id="locateMe" class="btn-locate-me">
+                        <span id="locateMeIcon">📍</span>
+                        <span id="locateMeText">Vị trí của tôi</span>
+                    </button>
+                </div>
+                <div class="mini-map-wrapper flex-grow-1" style="min-height:450px;">
+                    <div id="mini-map" style="height:100%;min-height:450px;"></div>
+                </div>
+                <div class="mini-map-tip mt-3">
+                    <span style="font-size:1.2rem">👆</span>
+                    <span>Click vào bản đồ để thả ghim 📍 hoặc dùng nút <strong>Vị trí của tôi</strong>!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    .btn-locate-me{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:20px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .3s ease;box-shadow:0 2px 10px rgba(102,126,234,.35);white-space:nowrap;}
+    .btn-locate-me:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(102,126,234,.5);}
+    .locate-pulse{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+    @@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+<script>
+    // ── Show/hide hotel fields based on category ──
+    var categorySelect = document.getElementById('categorySelect');
+    var hotelFields = document.getElementById('hotelFields');
+
+    function updateFields() {
+        var selectedText = categorySelect.options[categorySelect.selectedIndex]?.text?.toLowerCase() ?? '';
+        hotelFields.style.display = selectedText.includes('khách sạn') || selectedText.includes('hotel') ? 'block' : 'none';
+    }
+    categorySelect.addEventListener('change', updateFields);
+    updateFields();
+
+    // ── Map ──
+    var map = L.map('mini-map').setView([10.8231, 106.6297], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+    setTimeout(function(){map.invalidateSize();},500);
+    new ResizeObserver(function(){map.invalidateSize();}).observe(document.getElementById('mini-map'));
+
+    var marker=null,myLocationMarker=null;
+    var latInput=document.getElementById('lat');
+    var lngInput=document.getElementById('lng');
+
+    function reverseGeocode(lat,lng){
+        var addressInput=document.getElementById('Address');
+        if(!addressInput) return;
+        addressInput.value='⏳ Đang định vị địa chỉ...';
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`,{headers:{'User-Agent':'FoodRadar-DACS-App/1.0'}})
+            .then(r=>r.json()).then(d=>{addressInput.value=d&&d.display_name?d.display_name:'';}).catch(()=>{addressInput.value='';});
+    }
+    function placeMarker(latlng){
+        latInput.value=latlng.lat.toFixed(6);lngInput.value=latlng.lng.toFixed(6);
+        if(marker){marker.setLatLng(latlng);}else{marker=L.marker(latlng).addTo(map);}
+        reverseGeocode(latlng.lat,latlng.lng);
+    }
+    map.on('click',function(e){placeMarker(e.latlng);});
+
+    // ── My Location ──
+    var locateBtn=document.getElementById('locateMe');
+    var locateIcon=document.getElementById('locateMeIcon');
+    var locateText=document.getElementById('locateMeText');
+    locateBtn.addEventListener('click',function(){
+        if(!navigator.geolocation){alert('Trình duyệt không hỗ trợ định vị GPS.');return;}
+        locateBtn.classList.add('loading');locateIcon.innerHTML='<span class="locate-pulse"></span>';locateText.textContent='Đang định vị...';
+        navigator.geolocation.getCurrentPosition(
+            function(pos){
+                var latlng=L.latLng(pos.coords.latitude,pos.coords.longitude);
+                placeMarker(latlng);map.setView(latlng,17);
+                if(myLocationMarker)map.removeLayer(myLocationMarker);
+                var blueIcon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;background:#4285F4;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+                myLocationMarker=L.marker(latlng,{icon:blueIcon,zIndexOffset:-100}).addTo(map).bindPopup('📍 Vị trí hiện tại').openPopup();
+                locateBtn.classList.remove('loading');locateIcon.textContent='✅';locateText.textContent='Đã định vị!';
+                setTimeout(function(){locateIcon.textContent='📍';locateText.textContent='Vị trí của tôi';},3000);
+            },
+            function(err){
+                locateBtn.classList.remove('loading');locateIcon.textContent='❌';locateText.textContent='Không thể định vị';
+                setTimeout(function(){locateIcon.textContent='📍';locateText.textContent='Vị trí của tôi';},3000);
+            },{enableHighAccuracy:true,timeout:10000,maximumAge:0}
+        );
+    });
+
+    // ── Drag & Drop Image ──
+    var zone=document.getElementById('dragDropZone');
+    var imgInput=document.getElementById('imageInput');
+    var previewContainer=document.getElementById('imagePreviewContainer');
+    var preview=document.getElementById('imagePreview');
+    if(zone&&imgInput){
+        zone.addEventListener('click',()=>imgInput.click());
+        zone.addEventListener('dragover',(e)=>{e.preventDefault();zone.classList.add('dragover');});
+        ['dragleave','dragend'].forEach(t=>zone.addEventListener(t,()=>zone.classList.remove('dragover')));
+        zone.addEventListener('drop',(e)=>{e.preventDefault();zone.classList.remove('dragover');if(e.dataTransfer.files.length){imgInput.files=e.dataTransfer.files;handleImageFile(e.dataTransfer.files[0]);}});
+        imgInput.addEventListener('change',()=>{if(imgInput.files.length)handleImageFile(imgInput.files[0]);});
+    }
+    function handleImageFile(file){if(!file||!file.type.startsWith('image/'))return;var reader=new FileReader();reader.onload=(e)=>{preview.src=e.target.result;previewContainer.style.display='block';};reader.readAsDataURL(file);}
+</script>
+}

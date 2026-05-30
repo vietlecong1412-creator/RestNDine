@@ -1,36 +1,32 @@
-@model IEnumerable<DACS.Models.Hotel>
+@model IEnumerable<DACS.Models.Place>
 @{
-    ViewData["Title"] = "Quản lý khách sạn của tôi";
+    ViewData["Title"] = "Địa điểm của tôi";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <div class="admin-container animate-in">
     <div class="section-header">
         <h1 class="section-title">
-            <span class="icon">🏨</span> Quản lý khách sạn của tôi
+            <span class="icon">📋</span> Địa điểm của tôi
         </h1>
-        <a asp-action="Create" asp-controller="Hotel" class="btn-primary-custom">
-            ➕ Thêm khách sạn mới
+        <a asp-action="Create" asp-controller="Place" class="btn-primary-custom">
+            ➕ Thêm địa điểm mới
         </a>
     </div>
 
     @if (TempData["Success"] != null)
     {
-        <div class="alert-glass success mb-4">
-            ✅ @TempData["Success"]
-        </div>
+        <div class="alert-glass success mb-4">✅ @TempData["Success"]</div>
     }
 
     <div class="card-glass p-0">
         @if (!Model.Any())
         {
             <div class="p-5 text-center">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">🏨</div>
-                <h4 style="color: var(--text-primary)">Bạn chưa đăng ký khách sạn nào</h4>
-                <p style="color: var(--text-secondary)">Hãy thêm khách sạn đầu tiên của bạn để giới thiệu với khách du lịch.</p>
-                <a asp-action="Create" asp-controller="Hotel" class="btn-primary-custom mt-2">
-                    Bắt đầu thêm khách sạn
-                </a>
+                <div style="font-size:3rem;margin-bottom:1rem;">📍</div>
+                <h4 style="color:var(--text-primary)">Bạn chưa đăng ký địa điểm nào</h4>
+                <p style="color:var(--text-secondary)">Hãy thêm địa điểm đầu tiên để chia sẻ với cộng đồng.</p>
+                <a asp-action="Create" asp-controller="Place" class="btn-primary-custom mt-2">Bắt đầu thêm</a>
             </div>
         }
         else
@@ -39,10 +35,10 @@
                 <table class="table-custom">
                     <thead>
                         <tr>
-                            <th>Tên khách sạn</th>
+                            <th>Tên địa điểm</th>
+                            <th>Loại</th>
                             <th>Địa chỉ</th>
-                            <th>Hạng sao</th>
-                            <th>Banner (Ưu đãi)</th>
+                            <th>Banner</th>
                             <th>Trạng thái</th>
                             <th class="text-end">Thao tác</th>
                         </tr>
@@ -51,7 +47,7 @@
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td class="fw-bold" style="color: var(--text-primary)">
+                                <td class="fw-bold" style="color:var(--text-primary)">
                                     <div class="d-flex align-items-center gap-2">
                                         @if (!string.IsNullOrEmpty(item.ImageUrl))
                                         {
@@ -59,13 +55,17 @@
                                         }
                                         else
                                         {
-                                            <div style="width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🏨</div>
+                                            <div style="width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">@(item.Category?.Icon ?? "📍")</div>
                                         }
                                         @item.Name
                                     </div>
                                 </td>
+                                <td>
+                                    <span class="badge" style="background:rgba(255,255,255,.08);color:var(--text-secondary);border:1px solid var(--border);">
+                                        @(item.Category?.Icon) @(item.Category?.Name ?? "—")
+                                    </span>
+                                </td>
                                 <td><span class="text-truncate d-inline-block" style="max-width:200px;" title="@item.Address">@item.Address</span></td>
-                                <td><span class="text-warning fw-bold">@item.StarRating ★</span></td>
                                 <td>
                                     @switch (item.BannerStatus)
                                     {
@@ -86,24 +86,18 @@
                                 <td>
                                     @if (item.IsApproved)
                                     {
-                                        <span class="badge" style="background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3);">Đã duyệt</span>
+                                        <span class="badge" style="background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3);">Đã duyệt</span>
                                     }
                                     else
                                     {
-                                        <span class="badge" style="background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3);">Chờ duyệt</span>
+                                        <span class="badge" style="background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3);">Chờ duyệt</span>
                                     }
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex gap-2 justify-content-end">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn-icon" title="Xem chi tiết">
-                                            👁️
-                                        </a>
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn-icon text-primary" title="Sửa thông tin">
-                                            ✏️
-                                        </a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn-icon text-danger" title="Xóa">
-                                            🗑️
-                                        </a>
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn-icon" title="Xem chi tiết">👁️</a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn-icon text-primary" title="Sửa">✏️</a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn-icon text-danger" title="Xóa">🗑️</a>
                                     </div>
                                 </td>
                             </tr>

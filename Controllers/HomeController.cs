@@ -6,21 +6,38 @@ namespace DACS.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IRestaurantRepository _restaurantRepo;
-        private readonly IHotelRepository _hotelRepo;
+        private readonly IPlaceRepository _placeRepo;
 
-        public HomeController(IRestaurantRepository restaurantRepo, IHotelRepository hotelRepo)
+        public HomeController(IPlaceRepository placeRepo)
         {
-            _restaurantRepo = restaurantRepo;
-            _hotelRepo = hotelRepo;
+            _placeRepo = placeRepo;
         }
 
         public async Task<IActionResult> Index()
         {
+            var approvedPlaces = await _placeRepo.GetApprovedOnlyAsync();
+            
             var model = new HomeIndexViewModel
             {
-                Restaurants = await _restaurantRepo.GetApprovedOnlyAsync(),
-                Hotels = await _hotelRepo.GetApprovedOnlyAsync()
+                Places = approvedPlaces.Select(p => new Place
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Address = p.Address,
+                    Latitude = p.Latitude,
+                    Longitude = p.Longitude,
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl,
+                    PhoneNumber = p.PhoneNumber,
+                    PriceRange = p.PriceRange,
+                    BannerUrl = p.BannerUrl,
+                    BannerStatus = p.BannerStatus,
+                    IsApproved = p.IsApproved,
+                    CategoryId = p.CategoryId,
+                    StarRating = p.StarRating,
+                    Amenities = p.Amenities,
+                    OwnerId = p.OwnerId
+                }).ToList()
             };
             return View(model);
         }

@@ -11,11 +11,11 @@ namespace DACS.Data
         {
         }
 
-        public DbSet<Restaurant> Restaurants { get; set; }
-        public DbSet<Comment> Comments { get; set; }
-        public DbSet<RestaurantImage> RestaurantImages { get; set; }
-        public DbSet<Hotel> Hotels { get; set; }
-        public DbSet<HotelComment> HotelComments { get; set; }
-        public DbSet<HotelImage> HotelImages { get; set; }
+        // ── Bảng mới (Places) ──
+        public DbSet<PlaceCategory> PlaceCategories { get; set; }
+        public DbSet<Place> Places { get; set; }
+        public DbSet<PlaceComment> PlaceComments { get; set; }
+        public DbSet<PlaceImage> PlaceImages { get; set; }
+
     }
 }

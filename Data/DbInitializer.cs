@@ -15,10 +15,10 @@ namespace DACS.Data
             RoleManager<IdentityRole> roleManager,
             ApplicationDbContext context)
         {
-            // Tự động áp dụng Migration để tạo bảng trên cơ sở dữ liệu online khi khởi chạy app
+            // Tự động áp dụng Migration khi khởi chạy
             await context.Database.MigrateAsync();
 
-            // 1. Tạo Roles nếu chưa có
+            // 1. Tạo Roles
             foreach (var role in new[] { "Admin", "Owner", "Customer" })
             {
                 if (!await roleManager.RoleExistsAsync(role))
@@ -26,28 +26,23 @@ namespace DACS.Data
             }
 
             // 2. Tạo tài khoản mặc định
-            await EnsureUser(userManager, "admin@gmail.com",    "Password@123", "Admin");
-            await EnsureUser(userManager, "owner1@gmail.com",   "Password@123", "Owner");
-            await EnsureUser(userManager, "customer1@gmail.com","Password@123", "Customer");
-            await EnsureUser(userManager, "customer2@gmail.com","Password@123", "Customer");
-            await EnsureUser(userManager, "customer3@gmail.com","Password@123", "Customer");
+            await EnsureUser(userManager, "admin@gmail.com",     "Password@123", "Admin");
+            await EnsureUser(userManager, "owner1@gmail.com",    "Password@123", "Owner");
+            await EnsureUser(userManager, "customer1@gmail.com", "Password@123", "Customer");
+            await EnsureUser(userManager, "customer2@gmail.com", "Password@123", "Customer");
+            await EnsureUser(userManager, "customer3@gmail.com", "Password@123", "Customer");
 
-            // 3. Tự động gắn nhãn IsCafe cho các quán có tên chứa từ khóa cafe/coffee
-            var untaggedCafes = await context.Restaurants
-                .Where(r => !r.IsCafe && (
-                    r.Name.ToLower().Contains("cà phê") ||
-                    r.Name.ToLower().Contains("cafe")   ||
-                    r.Name.ToLower().Contains("coffee") ||
-                    r.Name.ToLower().Contains("café")
-                ))
-                .ToListAsync();
-
-            if (untaggedCafes.Any())
+            // 3. Seed PlaceCategories nếu chưa có
+            if (!await context.PlaceCategories.AnyAsync())
             {
-                foreach (var cafe in untaggedCafes)
-                    cafe.IsCafe = true;
+                context.PlaceCategories.AddRange(
+                    new PlaceCategory { Id = 1, Name = "Nhà hàng",    Slug = "restaurant", Icon = "🍴" },
+                    new PlaceCategory { Id = 2, Name = "Khách sạn",   Slug = "hotel",      Icon = "🏨" },
+                    new PlaceCategory { Id = 3, Name = "Quán cà phê", Slug = "cafe",       Icon = "☕" }
+                );
                 await context.SaveChangesAsync();
             }
+
         }
 
         private static async Task EnsureUser(
@@ -57,18 +52,13 @@ namespace DACS.Data
             var user = await userManager.FindByEmailAsync(email);
             if (user != null)
             {
-                // Đảm bảo các tài khoản seed mẫu luôn có EmailConfirmed = true
                 if (!user.EmailConfirmed)
                 {
                     user.EmailConfirmed = true;
                     await userManager.UpdateAsync(user);
                 }
-                
-                // Đảm bảo gán đúng quyền tài khoản
                 if (!await userManager.IsInRoleAsync(user, role))
-                {
                     await userManager.AddToRoleAsync(user, role);
-                }
                 return;
             }
 
