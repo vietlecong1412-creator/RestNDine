@@ -111,7 +111,7 @@ namespace DACS.Controllers
                 summary = await _aiSummaryService.SummarizeReviewsAsync(place.Name, reviews);
 
                 place.AiSummaryCache = summary;
-                place.AiSummaryCacheUpdatedAt = DateTime.Now;
+                place.AiSummaryCacheUpdatedAt = DateTime.UtcNow;
                 await _repo.UpdateAsync(place);
             }
 
@@ -383,7 +383,7 @@ namespace DACS.Controllers
                 Content   = content,
                 Rating    = rating,
                 UserId    = _userManager.GetUserId(User)!,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.PlaceComments.Add(comment);
@@ -428,7 +428,7 @@ namespace DACS.Controllers
             {
                 CommentId = commentId,
                 UserId    = userId,
-                VotedAt   = DateTime.Now
+                VotedAt   = DateTime.UtcNow
             });
 
             comment.HelpfulCount++;

@@ -15,7 +15,7 @@ namespace DACS.Models
         [Range(1, 5)]
         public int Rating { get; set; } = 5;
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>Số lượt bình chọn "Hữu ích" từ cộng đồng.</summary>
         public int HelpfulCount { get; set; } = 0;

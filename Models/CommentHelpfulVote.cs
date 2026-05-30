@@ -22,6 +22,6 @@ namespace DACS.Models
         [ForeignKey("UserId")]
         public virtual IdentityUser? User { get; set; }
 
-        public DateTime VotedAt { get; set; } = DateTime.Now;
+        public DateTime VotedAt { get; set; } = DateTime.UtcNow;
     }
 }
