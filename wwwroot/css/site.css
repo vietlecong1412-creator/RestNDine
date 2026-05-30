@@ -3423,16 +3423,33 @@ footer.site-footer {
 /* ── AI Dashboard & Neon Glow Card ── */
 .card-glass-ai {
   position: relative;
-  border: 1.5px solid rgba(249, 115, 22, 0.35) !important;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.93) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.2) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-lg) !important;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(249, 115, 22, 0.1), inset 0 0 12px rgba(249, 115, 22, 0.03) !important;
+  box-shadow: 0 8px 30px rgba(249, 115, 22, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: var(--text-primary) !important;
 }
+
 .card-glass-ai:hover {
-  border-color: rgba(249, 115, 22, 0.65) !important;
-  box-shadow: 0 12px 40px rgba(249, 115, 22, 0.22), inset 0 0 20px rgba(249, 115, 22, 0.06) !important;
+  border-color: rgba(249, 115, 22, 0.4) !important;
+  box-shadow: 0 12px 40px rgba(249, 115, 22, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04) !important;
   transform: translateY(-3px);
+}
+
+.dark-theme .card-glass-ai, body.dark-theme .card-glass-ai {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.93) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.35) !important;
+  box-shadow: 0 8px 32px rgba(249, 115, 22, 0.18), inset 0 0 12px rgba(249, 115, 22, 0.03) !important;
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .card-glass-ai:hover, body.dark-theme .card-glass-ai:hover {
+  border-color: rgba(249, 115, 22, 0.65) !important;
+  box-shadow: 0 12px 40px rgba(249, 115, 22, 0.32), inset 0 0 20px rgba(249, 115, 22, 0.06) !important;
 }
 .card-glass-ai::before {
   content: '';
@@ -3849,21 +3866,7 @@ input::-ms-clear {
    ============================================================ */
 
 /* ── 1. Premium AI Summary Card ── */
-.card-glass-ai {
-  background: var(--bg-card);
-  border: 1px solid rgba(249, 115, 22, 0.2);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 30px rgba(249, 115, 22, 0.04), var(--shadow-sm);
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.card-glass-ai:hover {
-  box-shadow: 0 16px 40px rgba(249, 115, 22, 0.08), var(--shadow-md);
-  transform: translateY(-2px);
-  border-color: rgba(249, 115, 22, 0.35);
-}
+/* Card styling unified above at line 3424 */
 
 .ai-icon-pulse {
   animation: pulse-glow 2s infinite alternate;
