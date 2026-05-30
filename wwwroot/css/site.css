@@ -128,7 +128,7 @@ body {
 
 .navbar-brand {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 1.45rem;
+  font-size: 1.65rem;
   font-weight: 800;
   background: linear-gradient(135deg, var(--primary), #fbbf24);
   -webkit-background-clip: text;
@@ -137,7 +137,7 @@ body {
   letter-spacing: -.5px;
   display: flex;
   align-items: center;
-  gap: .4rem;
+  gap: .6rem;
   text-decoration: none !important;
 }
 
