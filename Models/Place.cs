@@ -48,6 +48,13 @@ namespace DACS.Models
         /// <summary>Tiện ích khách sạn, VD: "Free Wifi, Hồ bơi, Buffet". Chỉ dùng khi CategoryId = Hotel.</summary>
         public string? Amenities { get; set; }
 
+        // ── AI Summary Cache ──
+        /// <summary>HTML tóm tắt AI đã biên dịch, được lưu cache để tăng tốc độ tải trang.</summary>
+        public string? AiSummaryCache { get; set; }
+
+        /// <summary>Thời điểm cache AI được tạo/cập nhật lần cuối.</summary>
+        public DateTime? AiSummaryCacheUpdatedAt { get; set; }
+
         // ── Owner ──
         public string? OwnerId { get; set; }
 

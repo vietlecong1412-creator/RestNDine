@@ -36,8 +36,28 @@ namespace DACS.Controllers
             var place = await _repo.GetByIdAsync(id);
             if (place == null) return NotFound();
 
-            var reviews = place.Comments?.Select(c => c.Content) ?? Enumerable.Empty<string>();
-            ViewBag.AiSummary = await _aiSummaryService.SummarizeReviewsAsync(place.Name, reviews);
+            // ── AI Summary Cache Logic ──
+            // Cache hợp lệ nếu: đã có cache VÀ không có bình luận mới hơn thời điểm cache
+            bool cacheValid = !string.IsNullOrEmpty(place.AiSummaryCache)
+                && place.AiSummaryCacheUpdatedAt.HasValue
+                && (!place.Comments.Any()
+                    || place.Comments.Max(c => c.CreatedAt) <= place.AiSummaryCacheUpdatedAt.Value);
+
+            if (cacheValid)
+            {
+                ViewBag.AiSummary = place.AiSummaryCache;
+            }
+            else
+            {
+                // Cache miss: gọi AI và lưu kết quả vào DB
+                var reviews = place.Comments?.Select(c => c.Content) ?? Enumerable.Empty<string>();
+                var summary = await _aiSummaryService.SummarizeReviewsAsync(place.Name, reviews);
+                ViewBag.AiSummary = summary;
+
+                place.AiSummaryCache = summary;
+                place.AiSummaryCacheUpdatedAt = DateTime.Now;
+                await _repo.UpdateAsync(place);
+            }
 
             return View(place);
         }
@@ -310,7 +330,33 @@ namespace DACS.Controllers
             _context.PlaceComments.Add(comment);
             await _context.SaveChangesAsync();
 
+            // Invalidate AI summary cache vì có bình luận mới
+            var place = await _repo.GetByIdAsync(placeId);
+            if (place != null)
+            {
+                place.AiSummaryCache = null;
+                place.AiSummaryCacheUpdatedAt = null;
+                await _repo.UpdateAsync(place);
+            }
+
             return RedirectToAction("Details", new { id = placeId });
+        }
+
+        // ─────────────────────────────────────
+        // POST: /Place/VoteCommentHelpful
+        // ─────────────────────────────────────
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> VoteCommentHelpful(int commentId)
+        {
+            var comment = await _context.PlaceComments.FindAsync(commentId);
+            if (comment == null)
+                return Json(new { success = false, message = "Không tìm thấy bình luận." });
+
+            comment.HelpfulCount++;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, newCount = comment.HelpfulCount });
         }
 
         // ─────────────────────────────────────

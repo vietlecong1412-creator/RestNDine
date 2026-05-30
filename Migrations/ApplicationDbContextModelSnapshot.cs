@@ -33,6 +33,12 @@ namespace DACS.Migrations
                     b.Property<string>("Address")
                         .HasColumnType("text");
 
+                    b.Property<string>("AiSummaryCache")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("AiSummaryCacheUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Amenities")
                         .HasColumnType("text");
 
@@ -127,6 +133,9 @@ namespace DACS.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("HelpfulCount")
+                        .HasColumnType("integer");
 
                     b.Property<int>("PlaceId")
                         .HasColumnType("integer");

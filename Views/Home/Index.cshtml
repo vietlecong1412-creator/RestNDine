@@ -6,6 +6,9 @@
 
 @* Leaflet CSS *@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+@* Leaflet.markercluster CSS *@
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
 <style>
     /* ── Desktop Toggle Button Styles ── */
@@ -312,6 +315,7 @@
 
 @section Scripts {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 <script>
 (function () {
     // ── Combined Data ──
@@ -432,6 +436,16 @@
     var activePriceFilter = 'all';   // 'all' | 'cheap' | 'medium' | 'premium'
     var currentRouteLine = null;
     var currentRouteAnimMarker = null;
+
+    // ── Marker Cluster Group ──
+    var markerClusterGroup = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        chunkedLoading: true
+    });
+    map.addLayer(markerClusterGroup);
 
     // ── Haversine distance (km) ──
     function calcDistance(lat1, lon1, lat2, lon2) {
@@ -879,8 +893,11 @@
             
             var pass = catOk && textOk && priceOk;
             if (markers[i]) { 
-                if (pass) markers[i].addTo(map); 
-                else map.removeLayer(markers[i]); 
+                if (pass) {
+                    if (!markerClusterGroup.hasLayer(markers[i])) markerClusterGroup.addLayer(markers[i]);
+                } else {
+                    if (markerClusterGroup.hasLayer(markers[i])) markerClusterGroup.removeLayer(markers[i]);
+                }
             }
             return pass;
         });
@@ -899,11 +916,10 @@
         render(filtered);
     }
 
-    // ── Build map markers ──
+    // ── Build map markers (add to cluster group) ──
     allPlaces.forEach(function(r, i) {
         if (!r.latitude || !r.longitude) return;
         var m = L.marker([r.latitude, r.longitude], {icon: makeIcon(r, false)})
-            .addTo(map)
             .bindPopup(buildPopup(r), {maxWidth: 240});
             
         m.on('click', function() { 
@@ -917,6 +933,7 @@
             }
         });
         markers[i] = m;
+        markerClusterGroup.addLayer(m); // Thêm vào cluster thay vì trực tiếp vào map
     });
 
     applyFilters();

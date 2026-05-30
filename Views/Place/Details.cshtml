@@ -279,6 +279,27 @@
                                         <span class="comment-rating-num">@c.Rating/5</span>
                                     </div>
                                     <div class="comment-content">@c.Content</div>
+                                    @* ── Helpful Vote Button ── *@
+                                    <div class="comment-helpful-row">
+                                        @if (User.Identity!.IsAuthenticated)
+                                        {
+                                            <button type="button"
+                                                    class="btn-helpful"
+                                                    id="helpful-btn-@c.Id"
+                                                    data-comment-id="@c.Id"
+                                                    title="Đánh dấu bình luận này là hữu ích">
+                                                <span class="helpful-thumb">👍</span>
+                                                <span class="helpful-label">Hữu ích</span>
+                                                <span class="helpful-count" id="helpful-count-@c.Id">@c.HelpfulCount</span>
+                                            </button>
+                                        }
+                                        else if (c.HelpfulCount > 0)
+                                        {
+                                            <span class="helpful-readonly">
+                                                👍 <span>@c.HelpfulCount</span> người thấy hữu ích
+                                            </span>
+                                        }
+                                    </div>
                                 </div>
                             </div>
                         }
@@ -490,6 +511,171 @@
     var slider=document.getElementById('restaurantSlider');
     if(slider){slider.addEventListener('mouseenter',stopAuto);slider.addEventListener('mouseleave',startAuto);}
     startAuto();
+})();
+</script>
+
+@* ── Helpful Vote AJAX ── *@
+<style>
+/* ── Helpful Vote Button ── */
+.comment-helpful-row {
+    margin-top: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-helpful {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1.5px solid rgba(var(--primary-rgb, 249,115,22), 0.25);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    outline: none;
+}
+.btn-helpful:hover {
+    background: rgba(249, 115, 22, 0.08);
+    border-color: rgba(249, 115, 22, 0.5);
+    color: #f97316;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(249, 115, 22, 0.15);
+}
+.btn-helpful.voted {
+    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.5);
+    color: #f97316;
+    cursor: default;
+    pointer-events: none;
+}
+.btn-helpful .helpful-count {
+    background: rgba(249, 115, 22, 0.12);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 0.72rem;
+    min-width: 20px;
+    text-align: center;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn-helpful .helpful-thumb {
+    font-size: 0.9rem;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@@keyframes helpfulBounce {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.4) rotate(-8deg); }
+    60%  { transform: scale(0.88) rotate(4deg); }
+    80%  { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+.btn-helpful.bouncing .helpful-thumb {
+    animation: helpfulBounce 0.55s ease forwards;
+}
+@@keyframes countPop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.5); }
+    100% { transform: scale(1); }
+}
+.btn-helpful.bouncing .helpful-count {
+    animation: countPop 0.4s 0.1s ease forwards;
+}
+.helpful-readonly {
+    font-size: 0.78rem;
+    color: var(--text-muted, #94a3b8);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+/* ── Details Toast Notification ── */
+.details-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.93);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+    transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 320px;
+}
+.details-toast.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+</style>
+<div id="details-toast-container"></div>
+<script>
+(function() {
+    // ── Toast helper (local to Details page) ──
+    function showDetailsToast(message, emoji) {
+        emoji = emoji || '✅';
+        var container = document.getElementById('details-toast-container');
+        var toast = document.createElement('div');
+        toast.className = 'details-toast';
+        toast.innerHTML = '<span style="font-size:1.1rem">' + emoji + '</span><span>' + message + '</span>';
+        container.appendChild(toast);
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() { toast.classList.add('visible'); });
+        });
+        setTimeout(function() {
+            toast.classList.remove('visible');
+            setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 400);
+        }, 3000);
+    }
+
+    // ── Helpful vote AJAX ──
+    document.querySelectorAll('.btn-helpful').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (btn.classList.contains('voted') || btn.classList.contains('loading')) return;
+            var commentId = btn.dataset.commentId;
+            var countEl   = document.getElementById('helpful-count-' + commentId);
+
+            btn.classList.add('loading');
+
+            fetch('/Place/VoteCommentHelpful', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: 'commentId=' + encodeURIComponent(commentId)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                btn.classList.remove('loading');
+                if (data.success) {
+                    if (countEl) countEl.textContent = data.newCount;
+                    btn.classList.add('voted', 'bouncing');
+                    setTimeout(function() { btn.classList.remove('bouncing'); }, 600);
+                    showDetailsToast('Cảm ơn bạn đã đánh dấu bình luận này là hữu ích!', '👍');
+                } else {
+                    showDetailsToast(data.message || 'Có lỗi xảy ra, vui lòng thử lại.', '⚠️');
+                }
+            })
+            .catch(function() {
+                btn.classList.remove('loading');
+                showDetailsToast('Không thể kết nối đến máy chủ.', '❌');
+            });
+        });
+    });
 })();
 </script>
 }

@@ -17,6 +17,9 @@ namespace DACS.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+        /// <summary>Số lượt bình chọn "Hữu ích" từ cộng đồng.</summary>
+        public int HelpfulCount { get; set; } = 0;
+
         [Required]
         public int PlaceId { get; set; }
 
