@@ -4,6 +4,6 @@ namespace DACS.Models
 {
     public class HomeIndexViewModel
     {
-        public IEnumerable<Place> Places { get; set; } = new List<Place>();
+        public IEnumerable<PlaceDto> Places { get; set; } = new List<PlaceDto>();
     }
 }

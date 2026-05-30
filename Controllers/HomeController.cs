@@ -19,7 +19,7 @@ namespace DACS.Controllers
             
             var model = new HomeIndexViewModel
             {
-                Places = approvedPlaces.Select(p => new Place
+                Places = approvedPlaces.Select(p => new PlaceDto
                 {
                     Id = p.Id,
                     Name = p.Name,
@@ -31,12 +31,12 @@ namespace DACS.Controllers
                     PhoneNumber = p.PhoneNumber,
                     PriceRange = p.PriceRange,
                     BannerUrl = p.BannerUrl,
+                    PaymentProofUrl = p.PaymentProofUrl,
                     BannerStatus = p.BannerStatus,
                     IsApproved = p.IsApproved,
                     CategoryId = p.CategoryId,
                     StarRating = p.StarRating,
-                    Amenities = p.Amenities,
-                    OwnerId = p.OwnerId
+                    Amenities = p.Amenities
                 }).ToList()
             };
             return View(model);
