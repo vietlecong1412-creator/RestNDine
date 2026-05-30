@@ -48,13 +48,8 @@ namespace DACS.Controllers
             }
             else
             {
-                var reviews = place.Comments?.Select(c => c.Content) ?? Enumerable.Empty<string>();
-                var summary = await _aiSummaryService.SummarizeReviewsAsync(place.Name, reviews);
-                ViewBag.AiSummary = summary;
-
-                place.AiSummaryCache = summary;
-                place.AiSummaryCacheUpdatedAt = DateTime.Now;
-                await _repo.UpdateAsync(place);
+                // Gán null để thông báo giao diện tiến hành gọi AJAX tải ngầm bất đồng bộ
+                ViewBag.AiSummary = null;
             }
 
             // ── Truyền danh sách commentId mà user hiện tại đã vote xuống View ──
@@ -75,6 +70,55 @@ namespace DACS.Controllers
 
             return View(place);
         }
+
+        private string FormatMarkdown(string txt)
+        {
+            if (string.IsNullOrEmpty(txt)) return "";
+            var parts = txt.Split("**");
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (i % 2 == 1) sb.Append("<strong>" + parts[i] + "</strong>");
+                else sb.Append(parts[i]);
+            }
+            return sb.ToString().Replace("\n", "<br/>");
+        }
+
+        // ─────────────────────────────────────
+        // GET: /Place/GetAiSummary
+        // ─────────────────────────────────────
+        [HttpGet]
+        public async Task<IActionResult> GetAiSummary(int placeId, bool forceRefresh = false)
+        {
+            var place = await _repo.GetByIdAsync(placeId);
+            if (place == null)
+                return Json(new { success = false, message = "Không tìm thấy địa điểm." });
+
+            bool cacheValid = !forceRefresh
+                && !string.IsNullOrEmpty(place.AiSummaryCache)
+                && place.AiSummaryCacheUpdatedAt.HasValue
+                && (!place.Comments.Any()
+                    || place.Comments.Max(c => c.CreatedAt) <= place.AiSummaryCacheUpdatedAt.Value);
+
+            string summary;
+            if (cacheValid)
+            {
+                summary = place.AiSummaryCache!;
+            }
+            else
+            {
+                var reviews = place.Comments?.Select(c => c.Content) ?? Enumerable.Empty<string>();
+                summary = await _aiSummaryService.SummarizeReviewsAsync(place.Name, reviews);
+
+                place.AiSummaryCache = summary;
+                place.AiSummaryCacheUpdatedAt = DateTime.Now;
+                await _repo.UpdateAsync(place);
+            }
+
+            var html = FormatMarkdown(summary);
+            return Json(new { success = true, html = html });
+        }
+
 
 
         // ─────────────────────────────────────

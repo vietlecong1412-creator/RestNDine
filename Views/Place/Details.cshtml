@@ -181,14 +181,27 @@
                     </div>
                 </div>
                 <div class="ai-summary-content">
-                    @if (ViewBag.AiSummary != null) { @Html.Raw(FormatMarkdown((string)ViewBag.AiSummary)) }
-                    else { <span class="text-muted">Đang tải báo cáo tóm tắt từ AI...</span> }
+                    @if (ViewBag.AiSummary != null) 
+                    { 
+                        @Html.Raw(FormatMarkdown((string)ViewBag.AiSummary)) 
+                    }
+                    else 
+                    { 
+                        <div class="ai-summary-loading-placeholder text-center py-4 animate-in">
+                            <div class="spinner-border mb-3" role="status" style="width: 2.5rem; height: 2.5rem; color: #f97316;">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                            <p class="mb-1 fw-semibold text-light">RestNDine AI đang phân tích bình luận...</p>
+                            <p class="text-muted small px-3">Quá trình này sử dụng mô hình học sâu PhoBERT để trích xuất khía cạnh (ABSA) và cảm xúc đánh giá. Có thể mất khoảng 3-5 giây.</p>
+                        </div>
+                    }
                 </div>
                 <div class="mt-4 pt-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-top-color:var(--border)!important;">
                     <span class="text-muted small">⚡ Phân tích bằng mô hình NLP 100% Cục bộ & Bảo mật</span>
-                    <button class="btn btn-sm btn-outline-custom" style="font-size:.72rem;border-radius:20px;padding:4px 12px;" onclick="location.reload();">🔄 Phân tích lại</button>
+                    <button id="btn-reanalyze-ai" class="btn btn-sm btn-outline-custom" style="font-size:.72rem;border-radius:20px;padding:4px 12px;" onclick="loadAiSummary(true);">🔄 Phân tích lại</button>
                 </div>
             </div>
+            
             
 
 
@@ -690,6 +703,70 @@
             });
         });
     });
-})();
+</script>
+
+<script>
+// ── AJAX AI Summary Loader ──
+function loadAiSummary(force) {
+    var contentEl = document.querySelector('.ai-summary-content');
+    if (!contentEl) return;
+
+    // Hiển thị hiệu ứng tải mượt mà
+    contentEl.innerHTML = `
+        <div class="ai-summary-loading-placeholder text-center py-4 animate-in">
+            <div class="spinner-border mb-3" role="status" style="width: 2.5rem; height: 2.5rem; color: #f97316;">
+                <span class="visually-hidden">Đang tải...</span>
+            </div>
+            <p class="mb-1 fw-semibold text-light">RestNDine AI đang phân tích bình luận...</p>
+            <p class="text-muted small px-3">Quá trình này sử dụng mô hình học sâu PhoBERT để trích xuất khía cạnh (ABSA) và cảm xúc đánh giá. Có thể mất khoảng 3-5 giây.</p>
+        </div>
+    `;
+
+    // Vô hiệu hóa nút Phân tích lại khi đang tải
+    var reanalyzeBtn = document.getElementById('btn-reanalyze-ai');
+    if (reanalyzeBtn) {
+        reanalyzeBtn.disabled = true;
+        reanalyzeBtn.innerHTML = '🔄 Đang phân tích...';
+        reanalyzeBtn.style.opacity = '0.6';
+        reanalyzeBtn.style.pointerEvents = 'none';
+    }
+
+    var url = '/Place/GetAiSummary?placeId=@Model.Id' + (force ? '&forceRefresh=true' : '');
+
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            contentEl.innerHTML = data.html;
+        } else {
+            contentEl.innerHTML = '<span class="text-danger">⚠️ Lỗi: ' + (data.message || 'Không thể tải báo cáo AI.') + '</span>';
+        }
+    })
+    .catch(function() {
+        contentEl.innerHTML = '<span class="text-danger">❌ Lỗi kết nối đến máy chủ khi tải báo cáo AI.</span>';
+    })
+    .finally(function() {
+        if (reanalyzeBtn) {
+            reanalyzeBtn.disabled = false;
+            reanalyzeBtn.innerHTML = '🔄 Phân tích lại';
+            reanalyzeBtn.style.opacity = '1';
+            reanalyzeBtn.style.pointerEvents = 'auto';
+        }
+    });
+}
+
+@if (ViewBag.AiSummary == null)
+{
+    <text>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAiSummary(false);
+    });
+    </text>
+}
 </script>
 }
