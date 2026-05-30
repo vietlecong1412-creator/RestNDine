@@ -263,10 +263,14 @@
                 }
 
                 <div class="comments-list">
+                    @{
+                        var votedIds = (ViewBag.VotedCommentIds as HashSet<int>) ?? new HashSet<int>();
+                    }
                     @if (Model.Comments.Any())
                     {
                         @foreach (var c in Model.Comments.OrderByDescending(x => x.CreatedAt))
                         {
+                            var hasVoted = votedIds.Contains(c.Id);
                             <div class="comment-item">
                                 <div class="comment-avatar">@(c.User?.Email?.Substring(0, 1).ToUpper() ?? "U")</div>
                                 <div class="comment-body">
@@ -284,12 +288,12 @@
                                         @if (User.Identity!.IsAuthenticated)
                                         {
                                             <button type="button"
-                                                    class="btn-helpful"
+                                                    class="btn-helpful @(hasVoted ? "voted" : "")"
                                                     id="helpful-btn-@c.Id"
                                                     data-comment-id="@c.Id"
-                                                    title="Đánh dấu bình luận này là hữu ích">
+                                                    title="@(hasVoted ? "Bạn đã bình chọn bình luận này" : "Đánh dấu bình luận này là hữu ích")">
                                                 <span class="helpful-thumb">👍</span>
-                                                <span class="helpful-label">Hữu ích</span>
+                                                <span class="helpful-label">@(hasVoted ? "Đã thấy hữu ích" : "Hữu ích")</span>
                                                 <span class="helpful-count" id="helpful-count-@c.Id">@c.HelpfulCount</span>
                                             </button>
                                         }
@@ -647,6 +651,7 @@
             if (btn.classList.contains('voted') || btn.classList.contains('loading')) return;
             var commentId = btn.dataset.commentId;
             var countEl   = document.getElementById('helpful-count-' + commentId);
+            var labelEl   = btn.querySelector('.helpful-label');
 
             btn.classList.add('loading');
 
@@ -662,10 +667,19 @@
             .then(function(data) {
                 btn.classList.remove('loading');
                 if (data.success) {
+                    // Vote thành công: cập nhật UI và khóa nút
                     if (countEl) countEl.textContent = data.newCount;
+                    if (labelEl) labelEl.textContent = 'Đã thấy hữu ích';
                     btn.classList.add('voted', 'bouncing');
+                    btn.title = 'Bạn đã bình chọn bình luận này';
                     setTimeout(function() { btn.classList.remove('bouncing'); }, 600);
                     showDetailsToast('Cảm ơn bạn đã đánh dấu bình luận này là hữu ích!', '👍');
+                } else if (data.alreadyVoted) {
+                    // Server xác nhận đã vote rồi (trường hợp race condition hoặc tab khác)
+                    if (labelEl) labelEl.textContent = 'Đã thấy hữu ích';
+                    btn.classList.add('voted');
+                    btn.title = 'Bạn đã bình chọn bình luận này';
+                    showDetailsToast('Bạn đã bình chọn bình luận này rồi!', 'ℹ️');
                 } else {
                     showDetailsToast(data.message || 'Có lỗi xảy ra, vui lòng thử lại.', '⚠️');
                 }

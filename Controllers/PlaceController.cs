@@ -37,7 +37,6 @@ namespace DACS.Controllers
             if (place == null) return NotFound();
 
             // ── AI Summary Cache Logic ──
-            // Cache hợp lệ nếu: đã có cache VÀ không có bình luận mới hơn thời điểm cache
             bool cacheValid = !string.IsNullOrEmpty(place.AiSummaryCache)
                 && place.AiSummaryCacheUpdatedAt.HasValue
                 && (!place.Comments.Any()
@@ -49,7 +48,6 @@ namespace DACS.Controllers
             }
             else
             {
-                // Cache miss: gọi AI và lưu kết quả vào DB
                 var reviews = place.Comments?.Select(c => c.Content) ?? Enumerable.Empty<string>();
                 var summary = await _aiSummaryService.SummarizeReviewsAsync(place.Name, reviews);
                 ViewBag.AiSummary = summary;
@@ -59,8 +57,25 @@ namespace DACS.Controllers
                 await _repo.UpdateAsync(place);
             }
 
+            // ── Truyền danh sách commentId mà user hiện tại đã vote xuống View ──
+            var currentUserId = _userManager.GetUserId(User);
+            if (currentUserId != null)
+            {
+                var commentIds = place.Comments.Select(c => c.Id).ToList();
+                var votedIds = await _context.CommentHelpfulVotes
+                    .Where(v => v.UserId == currentUserId && commentIds.Contains(v.CommentId))
+                    .Select(v => v.CommentId)
+                    .ToListAsync();
+                ViewBag.VotedCommentIds = new HashSet<int>(votedIds);
+            }
+            else
+            {
+                ViewBag.VotedCommentIds = new HashSet<int>();
+            }
+
             return View(place);
         }
+
 
         // ─────────────────────────────────────
         // GET: /Place/Create
@@ -349,9 +364,28 @@ namespace DACS.Controllers
         [Authorize]
         public async Task<IActionResult> VoteCommentHelpful(int commentId)
         {
+            var userId = _userManager.GetUserId(User);
+            if (userId == null)
+                return Json(new { success = false, message = "Bạn cần đăng nhập để bình chọn." });
+
             var comment = await _context.PlaceComments.FindAsync(commentId);
             if (comment == null)
                 return Json(new { success = false, message = "Không tìm thấy bình luận." });
+
+            // Kiểm tra xem user đã vote chưa (chống duplicate ở tầng DB)
+            bool alreadyVoted = await _context.CommentHelpfulVotes
+                .AnyAsync(v => v.CommentId == commentId && v.UserId == userId);
+
+            if (alreadyVoted)
+                return Json(new { success = false, alreadyVoted = true, message = "Bạn đã bình chọn bình luận này rồi." });
+
+            // Ghi nhận lượt vote mới
+            _context.CommentHelpfulVotes.Add(new CommentHelpfulVote
+            {
+                CommentId = commentId,
+                UserId    = userId,
+                VotedAt   = DateTime.Now
+            });
 
             comment.HelpfulCount++;
             await _context.SaveChangesAsync();
