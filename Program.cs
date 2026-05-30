@@ -32,7 +32,11 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<IAiSummaryService, LocalAiSummaryService>();
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
 // Register Swagger Generators
 builder.Services.AddEndpointsApiExplorer();
@@ -104,5 +108,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+app.MapControllers();
 app.MapRazorPages();
 app.Run();
