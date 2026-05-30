@@ -142,7 +142,7 @@ namespace DACS.Services
             double negPct = total > 0 ? (neg * 100.0 / total) : 0;
 
             var sb = new StringBuilder();
-            sb.AppendLine($"📊 **Báo cáo phân tích tự động từ FoodRadar Deep Learning AI (Transformer - PhoBERT)**");
+            sb.AppendLine($"📊 **Báo cáo phân tích tự động từ RestNDine Deep Learning AI (Transformer - PhoBERT)**");
             sb.AppendLine($"Dựa trên phân tích ngữ cảnh chuyên sâu của **{total} đánh giá** từ cộng đồng khách hàng:");
             sb.AppendLine();
             sb.AppendLine($"🟢 **Tích cực:** {posPct:F1}% ({pos} bình luận)");
@@ -276,7 +276,7 @@ namespace DACS.Services
             var topNegatives = negativeCounts.Where(x => x.Value > 0).OrderByDescending(x => x.Value).Select(x => x.Key).ToList();
 
             var sb = new StringBuilder();
-            sb.AppendLine($"📊 **Báo cáo phân tích tự động từ FoodRadar AI (Rule-based Fallback)**");
+            sb.AppendLine($"📊 **Báo cáo phân tích tự động từ RestNDine AI (Rule-based Fallback)**");
             sb.AppendLine($"Dựa trên phân tích nội dung của **{reviewList.Count} đánh giá** thực tế từ cộng đồng khách hàng:");
             sb.AppendLine();
 
