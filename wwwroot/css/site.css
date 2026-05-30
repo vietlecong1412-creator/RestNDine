@@ -2672,9 +2672,10 @@ footer.site-footer {
   background: rgba(251, 191, 36, 0.15);
   color: #fbbf24;
   padding: 6px 14px;
-  border-radius: 10px;
+  border-radius: 100px;
   font-weight: 600;
   border: 1px solid rgba(251, 191, 36, 0.3);
+  white-space: nowrap;
 }
 
 .meta-item {
