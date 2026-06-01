@@ -87,7 +87,7 @@ namespace DACS.Services
             var port = int.Parse(smtpSettings["Port"] ?? "587");
             var username = smtpSettings["Username"];
             var password = smtpSettings["Password"];
-            var from = smtpSettings["FromAddress"] ?? "no-reply@foodradar.com";
+            var from = smtpSettings["FromAddress"] ?? "no-reply@restndine.com";
             var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
 
             using (var client = new SmtpClient(host, port))
