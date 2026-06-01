@@ -140,7 +140,7 @@ namespace DACS.Areas.Identity.Pages.Account
             var emailBody = DACS.Services.EmailTemplateHelper.GetOtpEmailHtml(otpCode, user.Email);
             await _emailSender.SendEmailAsync(
                 user.Email,
-                "📡 Mã xác thực OTP tài khoản FoodRadar của bạn",
+                "📡 Mã xác thực OTP tài khoản RestNDine của bạn",
                 emailBody);
 
             TempData["Success"] = "Đã gửi lại mã OTP mới vào hòm thư của bạn!";

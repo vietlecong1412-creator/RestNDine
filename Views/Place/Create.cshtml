@@ -169,7 +169,7 @@
         var addressInput=document.getElementById('Address');
         if(!addressInput) return;
         addressInput.value='⏳ Đang định vị địa chỉ...';
-        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`,{headers:{'User-Agent':'FoodRadar-DACS-App/1.0'}})
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`,{headers:{'User-Agent':'RestNDine-DACS-App/1.0'}})
             .then(r=>r.json()).then(d=>{addressInput.value=d&&d.display_name?d.display_name:'';}).catch(()=>{addressInput.value='';});
     }
     function placeMarker(latlng){

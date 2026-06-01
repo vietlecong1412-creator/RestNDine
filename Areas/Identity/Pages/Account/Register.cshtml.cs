@@ -151,12 +151,12 @@ namespace DACS.Areas.Identity.Pages.Account
                         _memoryCache.Set(cacheKey, otpCode, TimeSpan.FromMinutes(10));
                         _memoryCache.Set($"CryptoToken_EmailConf_{userId}", cryptoToken, TimeSpan.FromMinutes(10));
 
-                        // 3. Sử dụng mẫu email HTML OTP cao cấp được thiết kế riêng cho FoodRadar
+                        // 3. Sử dụng mẫu email HTML OTP cao cấp được thiết kế riêng cho RestNDine
                         var emailBody = DACS.Services.EmailTemplateHelper.GetOtpEmailHtml(otpCode, Input.Email);
 
                         await _emailSender.SendEmailAsync(
                             Input.Email, 
-                            "📡 Mã xác thực OTP tài khoản FoodRadar của bạn",
+                            "📡 Mã xác thực OTP tài khoản RestNDine của bạn",
                             emailBody);
 
                         // 4. Chuyển hướng sang trang nhập mã OTP

@@ -61,7 +61,7 @@ namespace DACS.Services
 <body>
     <div class=""container"">
         <div class=""header"">
-            <h2>FoodRadar Security Service</h2>
+            <h2>RestNDine Security Service</h2>
         </div>
         <div class=""info"">
             <p><strong>Người nhận (To):</strong> {email}</p>
@@ -72,7 +72,7 @@ namespace DACS.Services
             {htmlMessage}
         </div>
         <div class=""footer"">
-            Đây là email giả lập trong môi trường phát triển (Development) của FoodRadar.
+            Đây là email giả lập trong môi trường phát triển (Development) của RestNDine.
         </div>
     </div>
 </body>
@@ -98,7 +98,7 @@ namespace DACS.Services
 
                 var mailMessage = new MailMessage
                 {
-                    From = new MailAddress(from, "FoodRadar Security"),
+                    From = new MailAddress(from, "RestNDine Security"),
                     Subject = subject,
                     Body = htmlMessage,
                     IsBodyHtml = true,

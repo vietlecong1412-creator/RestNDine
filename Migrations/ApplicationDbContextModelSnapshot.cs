@@ -37,7 +37,7 @@ namespace DACS.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CommentHelpfulVotes");
+                    b.ToTable("CommentHelpfulVotes", (string)null);
                 });
 
             modelBuilder.Entity("DACS.Models.Place", b =>
@@ -109,7 +109,7 @@ namespace DACS.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("Places");
+                    b.ToTable("Places", (string)null);
                 });
 
             modelBuilder.Entity("DACS.Models.PlaceCategory", b =>
@@ -134,7 +134,7 @@ namespace DACS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PlaceCategories");
+                    b.ToTable("PlaceCategories", (string)null);
                 });
 
             modelBuilder.Entity("DACS.Models.PlaceComment", b =>
@@ -171,7 +171,7 @@ namespace DACS.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PlaceComments");
+                    b.ToTable("PlaceComments", (string)null);
                 });
 
             modelBuilder.Entity("DACS.Models.PlaceImage", b =>
@@ -193,7 +193,7 @@ namespace DACS.Migrations
 
                     b.HasIndex("PlaceId");
 
-                    b.ToTable("PlaceImages");
+                    b.ToTable("PlaceImages", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

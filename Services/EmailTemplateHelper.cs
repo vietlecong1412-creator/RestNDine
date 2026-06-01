@@ -11,7 +11,7 @@ namespace DACS.Services
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Xác nhận tài khoản FoodRadar</title>
+    <title>Xác nhận tài khoản RestNDine</title>
 </head>
 <body style=""margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333333;"">
     <table align=""center"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);"">
@@ -19,7 +19,7 @@ namespace DACS.Services
         <tr>
             <td align=""center"" style=""padding: 40px 0 30px 0; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);"">
                 <span style=""font-size: 3.5rem; display: block; margin-bottom: 10px;"">📡</span>
-                <h1 style=""margin: 0; color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;"">FoodRadar</h1>
+                <h1 style=""margin: 0; color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;"">RestNDine</h1>
                 <p style=""margin: 5px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px; font-weight: 500;"">Bản đồ ẩm thực & Khách sạn trực quan</p>
             </td>
         </tr>
@@ -29,7 +29,7 @@ namespace DACS.Services
             <td style=""padding: 40px 30px;"">
                 <h2 style=""margin-top: 0; color: #1e293b; font-size: 22px; font-weight: 700; text-align: center;"">Xác thực tài khoản của bạn</h2>
                 <p style=""color: #64748b; font-size: 15px; line-height: 1.6; text-align: center; margin-bottom: 30px;"">
-                    Chào mừng bạn đến với cộng đồng người yêu ẩm thực! Bạn vừa đăng ký tài khoản tại FoodRadar bằng email <strong>{email}</strong>. Vui lòng bấm vào nút bên dưới để kích hoạt tài khoản ngay lập tức.
+                    Chào mừng bạn đến với cộng đồng người yêu ẩm thực! Bạn vừa đăng ký tài khoản tại RestNDine bằng email <strong>{email}</strong>. Vui lòng bấm vào nút bên dưới để kích hoạt tài khoản ngay lập tức.
                 </p>
                 
                 <!-- Action Button -->
@@ -53,9 +53,9 @@ namespace DACS.Services
         <!-- Footer -->
         <tr>
             <td style=""padding: 25px 30px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.5;"">
-                <p style=""margin: 0 0 8px 0;"">Email này được gửi tự động từ hệ thống bảo mật FoodRadar.</p>
+                <p style=""margin: 0 0 8px 0;"">Email này được gửi tự động từ hệ thống bảo mật RestNDine.</p>
                 <p style=""margin: 0;"">Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email hoặc liên hệ với bộ phận hỗ trợ của chúng tôi.</p>
-                <p style=""margin: 15px 0 0 0; font-weight: bold; color: #64748b;"">📡 FoodRadar &copy; 2026</p>
+                <p style=""margin: 15px 0 0 0; font-weight: bold; color: #64748b;"">📡 RestNDine &copy; 2026</p>
             </td>
         </tr>
     </table>
@@ -70,7 +70,7 @@ namespace DACS.Services
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Đặt lại mật khẩu FoodRadar</title>
+    <title>Đặt lại mật khẩu RestNDine</title>
 </head>
 <body style=""margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333333;"">
     <table align=""center"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);"">
@@ -78,7 +78,7 @@ namespace DACS.Services
         <tr>
             <td align=""center"" style=""padding: 40px 0 30px 0; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);"">
                 <span style=""font-size: 3.5rem; display: block; margin-bottom: 10px;"">🔐</span>
-                <h1 style=""margin: 0; color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;"">FoodRadar Security</h1>
+                <h1 style=""margin: 0; color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;"">RestNDine Security</h1>
                 <p style=""margin: 5px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px; font-weight: 500;"">Yêu cầu thay đổi mật khẩu</p>
             </td>
         </tr>
@@ -88,7 +88,7 @@ namespace DACS.Services
             <td style=""padding: 40px 30px;"">
                 <h2 style=""margin-top: 0; color: #1e293b; font-size: 22px; font-weight: 700; text-align: center;"">Yêu cầu đặt lại mật khẩu</h2>
                 <p style=""color: #64748b; font-size: 15px; line-height: 1.6; text-align: center; margin-bottom: 30px;"">
-                    Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản FoodRadar liên kết với email <strong>{email}</strong>. Vui lòng bấm vào nút bên dưới để thiết lập mật khẩu mới ngay lập tức.
+                    Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản RestNDine liên kết với email <strong>{email}</strong>. Vui lòng bấm vào nút bên dưới để thiết lập mật khẩu mới ngay lập tức.
                 </p>
                 
                 <!-- Action Button -->
@@ -116,9 +116,9 @@ namespace DACS.Services
         <!-- Footer -->
         <tr>
             <td style=""padding: 25px 30px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.5;"">
-                <p style=""margin: 0 0 8px 0;"">Email này được gửi tự động từ hệ thống bảo mật FoodRadar.</p>
+                <p style=""margin: 0 0 8px 0;"">Email này được gửi tự động từ hệ thống bảo mật RestNDine.</p>
                 <p style=""margin: 0;"">Nếu bạn không thực hiện yêu cầu này, tài khoản của bạn vẫn an toàn và bạn có thể bỏ qua email này.</p>
-                <p style=""margin: 15px 0 0 0; font-weight: bold; color: #64748b;"">📡 FoodRadar &copy; 2026</p>
+                <p style=""margin: 15px 0 0 0; font-weight: bold; color: #64748b;"">📡 RestNDine &copy; 2026</p>
             </td>
         </tr>
     </table>
@@ -133,7 +133,7 @@ namespace DACS.Services
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Mã xác thực OTP FoodRadar</title>
+    <title>Mã xác thực OTP RestNDine</title>
 </head>
 <body style=""margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333333;"">
     <table align=""center"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);"">
@@ -141,7 +141,7 @@ namespace DACS.Services
         <tr>
             <td align=""center"" style=""padding: 40px 0 30px 0; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);"">
                 <span style=""font-size: 3.5rem; display: block; margin-bottom: 10px;"">📡</span>
-                <h1 style=""margin: 0; color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;"">FoodRadar</h1>
+                <h1 style=""margin: 0; color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;"">RestNDine</h1>
                 <p style=""margin: 5px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px; font-weight: 500;"">Bản đồ ẩm thực & Khách sạn trực quan</p>
             </td>
         </tr>
@@ -151,7 +151,7 @@ namespace DACS.Services
             <td style=""padding: 40px 30px;"">
                 <h2 style=""margin-top: 0; color: #1e293b; font-size: 22px; font-weight: 700; text-align: center;"">Mã xác thực OTP của bạn</h2>
                 <p style=""color: #64748b; font-size: 15px; line-height: 1.6; text-align: center; margin-bottom: 25px;"">
-                    Chào mừng bạn đến với FoodRadar! Bạn vừa đăng ký tài khoản mới bằng email <strong>{email}</strong>. Vui lòng sử dụng mã xác thực OTP gồm 6 chữ số dưới đây để kích hoạt tài khoản của mình.
+                    Chào mừng bạn đến với RestNDine! Bạn vừa đăng ký tài khoản mới bằng email <strong>{email}</strong>. Vui lòng sử dụng mã xác thực OTP gồm 6 chữ số dưới đây để kích hoạt tài khoản của mình.
                 </p>
                 
                 <!-- OTP Code Display -->
@@ -172,9 +172,9 @@ namespace DACS.Services
         <!-- Footer -->
         <tr>
             <td style=""padding: 25px 30px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.5;"">
-                <p style=""margin: 0 0 8px 0;"">Email này được gửi tự động từ hệ thống bảo mật FoodRadar.</p>
+                <p style=""margin: 0 0 8px 0;"">Email này được gửi tự động từ hệ thống bảo mật RestNDine.</p>
                 <p style=""margin: 0;"">Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email hoặc liên hệ với bộ phận hỗ trợ của chúng tôi.</p>
-                <p style=""margin: 15px 0 0 0; font-weight: bold; color: #64748b;"">📡 FoodRadar &copy; 2026</p>
+                <p style=""margin: 15px 0 0 0; font-weight: bold; color: #64748b;"">📡 RestNDine &copy; 2026</p>
             </td>
         </tr>
     </table>

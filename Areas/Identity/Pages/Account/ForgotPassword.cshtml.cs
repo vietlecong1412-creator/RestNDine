@@ -54,12 +54,12 @@ namespace DACS.Areas.Identity.Pages.Account
                     values: new { area = "Identity", code },
                     protocol: Request.Scheme);
 
-                // Sử dụng mẫu email HTML cao cấp khôi phục mật khẩu của FoodRadar
+                // Sử dụng mẫu email HTML cao cấp khôi phục mật khẩu của RestNDine
                 var emailBody = DACS.Services.EmailTemplateHelper.GetResetPasswordHtml(callbackUrl, Input.Email);
 
                 await _emailSender.SendEmailAsync(
                     Input.Email,
-                    "🔐 Đặt lại mật khẩu tài khoản FoodRadar của bạn",
+                    "🔐 Đặt lại mật khẩu tài khoản RestNDine của bạn",
                     emailBody);
 
                 return RedirectToPage("./ForgotPasswordConfirmation");
