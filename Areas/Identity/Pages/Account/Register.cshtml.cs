@@ -152,6 +152,7 @@ namespace DACS.Areas.Identity.Pages.Account
                         _memoryCache.Set($"CryptoToken_EmailConf_{userId}", cryptoToken, TimeSpan.FromMinutes(10));
 
                         // 3. Sử dụng mẫu email HTML OTP cao cấp được thiết kế riêng cho RestNDine
+                        _logger.LogWarning(">>> [DEV] OTP cho {Email}: {Otp} <<<", Input.Email, otpCode);
                         var emailBody = DACS.Services.EmailTemplateHelper.GetOtpEmailHtml(otpCode, Input.Email);
 
                         await _emailSender.SendEmailAsync(

@@ -25,30 +25,29 @@ namespace DACS.Services
 
         public Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            // Chạy tiến trình gửi email ngầm trên ThreadPool giúp phản hồi HTTP trả về ngay lập tức cho người dùng
             _ = Task.Run(async () =>
             {
-                var smtpSettings = _configuration.GetSection("SmtpSettings");
-                var host = smtpSettings["Host"];
-
-                if (string.IsNullOrEmpty(host))
-                {
-                    _logger.LogWarning("SMTP Host chưa được cấu hình. Hệ thống sẽ lưu email thành file HTML.");
-                    await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
-                    return;
-                }
-
                 try
                 {
-                    // Gửi qua SMTP thật (Production)
-                    var port = int.Parse(smtpSettings["Port"] ?? "587");
-                    var username = smtpSettings["Username"];
-                    var password = smtpSettings["Password"];
-                    var from = smtpSettings["FromAddress"] ?? "no-reply@restndine.com";
-                    var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
+                    var smtpSettings = _configuration.GetSection("SmtpSettings");
+                    var host = smtpSettings["Host"];
 
-                    using (var client = new SmtpClient(host, port))
+                    if (string.IsNullOrEmpty(host))
                     {
+                        _logger.LogWarning("SMTP Host chưa được cấu hình. Lưu email thành file HTML.");
+                        await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
+                        return;
+                    }
+
+                    try
+                    {
+                        var port = int.Parse(smtpSettings["Port"] ?? "587");
+                        var username = smtpSettings["Username"];
+                        var password = smtpSettings["Password"];
+                        var from = smtpSettings["FromAddress"] ?? "no-reply@restndine.com";
+                        var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
+
+                        using var client = new SmtpClient(host, port);
                         client.UseDefaultCredentials = false;
                         client.Credentials = new NetworkCredential(username, password);
                         client.EnableSsl = enableSsl;
@@ -62,21 +61,18 @@ namespace DACS.Services
                         };
                         mailMessage.To.Add(email);
 
-                        // Áp dụng giới hạn thời gian chờ (Timeout) là 10 giây bằng WaitAsync.
-                        await client.SendMailAsync(mailMessage).WaitAsync(TimeSpan.FromSeconds(10));
-                        _logger.LogInformation($"Gửi email thật thành công tới {email} qua SMTP.");
+                        await client.SendMailAsync(mailMessage).WaitAsync(TimeSpan.FromSeconds(15));
+                        _logger.LogInformation("Gửi email thành công tới {Email} qua SMTP.", email);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Gửi email tới {Email} qua SMTP thất bại: {Message}", email, ex.Message);
+                        await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Gửi email tới {email} qua SMTP thất bại: {ex.Message}");
-
-                    // Nếu đang ở môi trường Phát triển (Development), tự động fallback lưu email cục bộ để không nghẽn luồng xử lý
-                    if (_env.EnvironmentName == Microsoft.Extensions.Hosting.Environments.Development)
-                    {
-                        _logger.LogWarning("Đang ở môi trường Phát triển (Development). Tự động lưu email thành file HTML cục bộ.");
-                        await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
-                    }
+                    _logger.LogError(ex, "Lỗi nghiêm trọng trong EmailSender khi gửi tới {Email}: {Message}", email, ex.Message);
                 }
             });
 
