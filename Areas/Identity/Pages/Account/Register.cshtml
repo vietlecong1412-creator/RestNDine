@@ -54,9 +54,48 @@
         input::-ms-clear {
             display: none !important;
         }
+
+        /* Loading Overlay Styling */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            max-width: 360px;
+            width: 90%;
+            animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @@keyframes scaleUp {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body class="auth-page">
+    <!-- Beautiful modern loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-box">
+            <i class="fa-solid fa-circle-notch fa-spin text-primary mb-4" style="font-size: 3.5rem; color: #ea580c !important;"></i>
+            <h4 class="fw-bold" style="color: #1e293b; font-size: 1.25rem;">Đang tạo tài khoản...</h4>
+            <p class="text-muted small mb-0 mt-2">Vui lòng chờ trong giây lát để hệ thống khởi tạo.</p>
+        </div>
+    </div>
+
     <div class="auth-card">
         <div class="auth-header">
             <div class="auth-logo">
@@ -159,6 +198,20 @@
                 } else {
                     passwordInput.attr('type', 'password');
                     icon.removeClass('fa-eye-slash').addClass('fa-eye');
+                }
+            });
+
+            // Hiệu ứng load mượt mà khi submit form
+            $('#registerForm').on('submit', function(e) {
+                var $form = $(this);
+                if ($form.valid()) {
+                    var $submitBtn = $('#registerSubmit');
+                    // Vô hiệu hóa nút bấm để tránh gửi trùng lặp và tạo cảm giác mượt mà
+                    $submitBtn.prop('disabled', true);
+                    $submitBtn.html('Đang xử lý... <i class="fa-solid fa-circle-notch fa-spin ms-2"></i>');
+                    
+                    // Hiển thị overlay làm mờ kính cường lực cao cấp
+                    $('#loadingOverlay').css('display', 'flex').hide().fadeIn(200);
                 }
             });
         });

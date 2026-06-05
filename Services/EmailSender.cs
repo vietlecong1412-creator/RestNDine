@@ -23,26 +23,78 @@ namespace DACS.Services
             _env = env;
         }
 
-        public async Task SendEmailAsync(string email, string subject, string htmlMessage)
+        public Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            var smtpSettings = _configuration.GetSection("SmtpSettings");
-            var host = smtpSettings["Host"];
-
-            if (string.IsNullOrEmpty(host))
+            // Chạy tiến trình gửi email ngầm trên ThreadPool giúp phản hồi HTTP trả về ngay lập tức cho người dùng
+            _ = Task.Run(async () =>
             {
-                // Môi trường Phát triển (Development): Lưu Email thành tệp HTML cục bộ để dễ test
-                _logger.LogWarning("SMTP Host chưa được cấu hình. Hệ thống sẽ lưu email thành file HTML.");
+                var smtpSettings = _configuration.GetSection("SmtpSettings");
+                var host = smtpSettings["Host"];
 
-                var emailDir = Path.Combine(_env.WebRootPath, "sent_emails");
-                if (!Directory.Exists(emailDir))
+                if (string.IsNullOrEmpty(host))
                 {
-                    Directory.CreateDirectory(emailDir);
+                    _logger.LogWarning("SMTP Host chưa được cấu hình. Hệ thống sẽ lưu email thành file HTML.");
+                    await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
+                    return;
                 }
 
-                var fileName = $"email-{Guid.NewGuid()}.html";
-                var filePath = Path.Combine(emailDir, fileName);
+                try
+                {
+                    // Gửi qua SMTP thật (Production)
+                    var port = int.Parse(smtpSettings["Port"] ?? "587");
+                    var username = smtpSettings["Username"];
+                    var password = smtpSettings["Password"];
+                    var from = smtpSettings["FromAddress"] ?? "no-reply@restndine.com";
+                    var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
 
-                var content = $@"<!DOCTYPE html>
+                    using (var client = new SmtpClient(host, port))
+                    {
+                        client.UseDefaultCredentials = false;
+                        client.Credentials = new NetworkCredential(username, password);
+                        client.EnableSsl = enableSsl;
+
+                        var mailMessage = new MailMessage
+                        {
+                            From = new MailAddress(from, "RestNDine Security"),
+                            Subject = subject,
+                            Body = htmlMessage,
+                            IsBodyHtml = true,
+                        };
+                        mailMessage.To.Add(email);
+
+                        // Áp dụng giới hạn thời gian chờ (Timeout) là 10 giây bằng WaitAsync.
+                        await client.SendMailAsync(mailMessage).WaitAsync(TimeSpan.FromSeconds(10));
+                        _logger.LogInformation($"Gửi email thật thành công tới {email} qua SMTP.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Gửi email tới {email} qua SMTP thất bại: {ex.Message}");
+
+                    // Nếu đang ở môi trường Phát triển (Development), tự động fallback lưu email cục bộ để không nghẽn luồng xử lý
+                    if (_env.EnvironmentName == Microsoft.Extensions.Hosting.Environments.Development)
+                    {
+                        _logger.LogWarning("Đang ở môi trường Phát triển (Development). Tự động lưu email thành file HTML cục bộ.");
+                        await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
+                    }
+                }
+            });
+
+            return Task.CompletedTask;
+        }
+
+        private async Task WriteEmailToLocalHtmlAsync(string email, string subject, string htmlMessage)
+        {
+            var emailDir = Path.Combine(_env.WebRootPath, "sent_emails");
+            if (!Directory.Exists(emailDir))
+            {
+                Directory.CreateDirectory(emailDir);
+            }
+
+            var fileName = $"email-{Guid.NewGuid()}.html";
+            var filePath = Path.Combine(emailDir, fileName);
+
+            var content = $@"<!DOCTYPE html>
 <html lang=""vi"">
 <head>
     <meta charset=""utf-8"" />
@@ -78,36 +130,8 @@ namespace DACS.Services
 </body>
 </html>";
 
-                await File.WriteAllTextAsync(filePath, content);
-                _logger.LogInformation($"[EMAIL SIMULATOR] Email gửi tới {email} đã được lưu thành tệp HTML tại: /sent_emails/{fileName}");
-                return;
-            }
-
-            // Gửi qua SMTP thật (Production)
-            var port = int.Parse(smtpSettings["Port"] ?? "587");
-            var username = smtpSettings["Username"];
-            var password = smtpSettings["Password"];
-            var from = smtpSettings["FromAddress"] ?? "no-reply@restndine.com";
-            var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
-
-            using (var client = new SmtpClient(host, port))
-            {
-                client.UseDefaultCredentials = false;
-                client.Credentials = new NetworkCredential(username, password);
-                client.EnableSsl = enableSsl;
-
-                var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(from, "RestNDine Security"),
-                    Subject = subject,
-                    Body = htmlMessage,
-                    IsBodyHtml = true,
-                };
-                mailMessage.To.Add(email);
-
-                await client.SendMailAsync(mailMessage);
-                _logger.LogInformation($"Gửi email thật thành công tới {email} qua SMTP.");
-            }
+            await File.WriteAllTextAsync(filePath, content);
+            _logger.LogInformation($"[EMAIL SIMULATOR] Email gửi tới {email} đã được lưu thành tệp HTML tại: /sent_emails/{fileName}");
         }
     }
 }
