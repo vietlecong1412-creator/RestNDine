@@ -15,17 +15,20 @@ namespace DACS.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly DACS.Data.ApplicationDbContext _context;
         private readonly IAiSummaryService _aiSummaryService;
+        private readonly VnPayService _vnPayService;
 
         public PlaceController(
             IPlaceRepository repo,
             UserManager<IdentityUser> userManager,
             DACS.Data.ApplicationDbContext context,
-            IAiSummaryService aiSummaryService)
+            IAiSummaryService aiSummaryService,
+            VnPayService vnPayService)
         {
             _repo = repo;
             _userManager = userManager;
             _context = context;
             _aiSummaryService = aiSummaryService;
+            _vnPayService = vnPayService;
         }
 
         // ─────────────────────────────────────
@@ -367,6 +370,55 @@ namespace DACS.Controllers
             return RedirectToAction("Details", new { id });
         }
 
+        [HttpPost]
+        [Authorize(Roles = "Owner,Admin")]
+        public async Task<IActionResult> UploadBannerImage(int id, Microsoft.AspNetCore.Http.IFormFile bannerImage)
+        {
+            var place = await _repo.GetByIdAsync(id);
+            if (place == null || (place.OwnerId != _userManager.GetUserId(User) && !User.IsInRole("Admin")))
+                return Unauthorized();
+
+            if (place.BannerStatus != BannerStatus.Active && !User.IsInRole("Admin"))
+            {
+                TempData["Error"] = "Chiến dịch quảng cáo không hoạt động.";
+                return RedirectToAction("Details", new { id });
+            }
+
+            if (bannerImage != null && bannerImage.Length > 0)
+            {
+                var ext = System.IO.Path.GetExtension(bannerImage.FileName);
+                var fn  = Guid.NewGuid().ToString() + ext;
+                var dir = System.IO.Path.Combine(
+                    System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "banners");
+                if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
+                
+                var filePath = System.IO.Path.Combine(dir, fn);
+                using (var s = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
+                    await bannerImage.CopyToAsync(s);
+
+                // Xóa ảnh cũ nếu có để tránh rác server
+                if (!string.IsNullOrEmpty(place.BannerUrl))
+                {
+                    var oldPath = System.IO.Path.Combine(
+                        System.IO.Directory.GetCurrentDirectory(), "wwwroot", place.BannerUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(oldPath))
+                    {
+                        try { System.IO.File.Delete(oldPath); } catch {}
+                    }
+                }
+
+                place.BannerUrl = $"/images/banners/{fn}";
+                await _repo.UpdateAsync(place);
+                TempData["Success"] = "Đã tải lên/cập nhật ảnh banner thành công!";
+            }
+            else
+            {
+                TempData["Error"] = "Vui lòng chọn ảnh banner hợp lệ.";
+            }
+
+            return RedirectToAction("Details", new { id });
+        }
+
         // ─────────────────────────────────────
         // Comments
         // ─────────────────────────────────────
@@ -496,6 +548,115 @@ namespace DACS.Controllers
 
             TempData["Success"] = "Đã xóa ảnh!";
             return RedirectToAction("Details", new { id = placeId });
+        }
+
+        // ─────────────────────────────────────
+        // VNPay – Khởi tạo thanh toán
+        // ─────────────────────────────────────
+        [HttpPost]
+        [Authorize(Roles = "Owner,Admin")]
+        public async Task<IActionResult> VnpayCheckout(int id, Microsoft.AspNetCore.Http.IFormFile bannerImage)
+        {
+            var place = await _repo.GetByIdAsync(id);
+            if (place == null || (place.OwnerId != _userManager.GetUserId(User) && !User.IsInRole("Admin")))
+                return Unauthorized();
+
+            if (bannerImage == null || bannerImage.Length == 0)
+            {
+                TempData["Error"] = "Vui lòng chọn tệp ảnh banner trước khi tiến hành thanh toán.";
+                return RedirectToAction("Payment", new { id });
+            }
+
+            // Lưu ảnh banner
+            var ext = System.IO.Path.GetExtension(bannerImage.FileName);
+            var fn  = Guid.NewGuid().ToString() + ext;
+            var dir = System.IO.Path.Combine(
+                System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "banners");
+            if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
+            
+            var filePath = System.IO.Path.Combine(dir, fn);
+            using (var s = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
+                await bannerImage.CopyToAsync(s);
+
+            // Dọn dẹp ảnh cũ nếu có
+            if (!string.IsNullOrEmpty(place.BannerUrl))
+            {
+                var oldPath = System.IO.Path.Combine(
+                    System.IO.Directory.GetCurrentDirectory(), "wwwroot", place.BannerUrl.TrimStart('/'));
+                if (System.IO.File.Exists(oldPath))
+                {
+                    try { System.IO.File.Delete(oldPath); } catch {}
+                }
+            }
+
+            place.BannerUrl = $"/images/banners/{fn}";
+            await _repo.UpdateAsync(place);
+
+            // Tạo mã đơn hàng duy nhất: banner-{placeId}-{timestamp}
+            var orderId = $"banner-{id}-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+            var paymentRequest = new DACS.Services.VnPayPaymentRequest
+            {
+                OrderId   = orderId,
+                OrderInfo = $"Quang cao banner Place {id}",
+                Amount    = 100000, // 100,000 VNĐ
+                CreatedAt = DateTime.Now
+            };
+
+            var paymentUrl = _vnPayService.CreatePaymentUrl(HttpContext, paymentRequest);
+            return Redirect(paymentUrl);
+        }
+
+        // ─────────────────────────────────────
+        // VNPay – Callback (Return URL)
+        // ─────────────────────────────────────
+        public async Task<IActionResult> VnpayReturn()
+        {
+            // Xác thực chữ ký từ VNPAY
+            bool isValid = _vnPayService.ValidateSignature(Request.Query, out string responseCode);
+
+            if (!isValid)
+            {
+                TempData["Error"] = "Chữ ký không hợp lệ. Vui lòng liên hệ hỗ trợ.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            // Lấy placeId từ vnp_TxnRef (dạng "banner-{placeId}-{timestamp}")
+            var txnRef = Request.Query["vnp_TxnRef"].ToString();
+            var parts  = txnRef.Split('-');
+            if (parts.Length < 2 || !int.TryParse(parts[1], out int placeId))
+            {
+                TempData["Error"] = "Không xác định được đơn hàng.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            var place = await _repo.GetByIdAsync(placeId);
+            if (place == null) return NotFound();
+
+            // Mã "00" = thanh toán thành công
+            if (responseCode == "00")
+            {
+                // Chuyển trạng thái sang chờ Admin phê duyệt (thay vì kích hoạt ngay)
+                place.BannerStatus    = BannerStatus.PendingPayment;
+                place.PaymentProofUrl = $"vnpay:{txnRef}"; // lưu mã giao dịch làm bằng chứng
+                await _repo.UpdateAsync(place);
+
+                TempData["VnpaySuccess"] = $"Thanh toán VNPay thành công! Yêu cầu banner của <strong>{place.Name}</strong> đã được lưu và đang chờ Admin phê duyệt.";
+                return RedirectToAction("Details", new { id = placeId });
+            }
+            else
+            {
+                // Thanh toán thất bại hoặc bị hủy
+                string msg = responseCode switch
+                {
+                    "24" => "Giao dịch bị hủy bởi người dùng.",
+                    "11" => "Giao dịch hết hạn. Vui lòng thử lại.",
+                    "09" => "Thẻ/tài khoản chưa đăng ký dịch vụ.",
+                    _    => $"Thanh toán thất bại (Mã lỗi: {responseCode})."
+                };
+                TempData["Error"] = msg;
+                return RedirectToAction("Payment", new { id = placeId });
+            }
         }
     }
 }

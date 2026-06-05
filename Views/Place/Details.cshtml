@@ -410,8 +410,34 @@
                     {
                         <div class="mb-3">
                             <span class="badge" style="background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3);">✅ Đang hiển thị trên trang chủ</span>
-                            <img src="@Model.BannerUrl" class="mt-2" style="width:100%;border-radius:8px;border:1px solid var(--border);" alt="Banner" />
+                            @if (!string.IsNullOrEmpty(Model.BannerUrl))
+                            {
+                                <img src="@Model.BannerUrl" class="mt-2" style="width:100%;border-radius:8px;border:1px solid var(--border);" alt="Banner" />
+                            }
+                            else
+                            {
+                                <div class="mt-2 p-3 text-center border border-dashed rounded text-muted" style="border-color:rgba(251,191,36,.4)!important;background:rgba(251,191,36,.02);border-style:dashed !important;">
+                                    <i class="fa-solid fa-image-slash d-block mb-1 fs-4 text-warning" style="margin-bottom: 0.5rem;"></i>
+                                    Bạn chưa tải lên ảnh banner. Hãy chọn ảnh bên dưới để bắt đầu hiển thị quảng cáo!
+                                </div>
+                            }
                         </div>
+
+                        <!-- Form thay đổi/tải lên ảnh banner -->
+                        <form method="post" asp-action="UploadBannerImage" enctype="multipart/form-data" class="mt-3 mb-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <div class="mb-2">
+                                <label class="small text-muted fw-bold mb-1">
+                                    @(string.IsNullOrEmpty(Model.BannerUrl) ? "Tải lên ảnh banner (1200×400 px)" : "Thay đổi ảnh banner khác")
+                                </label>
+                                <input type="file" name="bannerImage" accept="image/*" required class="form-control form-control-sm" style="background:rgba(255,255,255,0.05);border-color:var(--border);color:var(--text-primary);" />
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-warning w-100 fw-bold" style="color:#1e293b;background:#fbbf24;border:none;padding:.4rem .75rem;border-radius:8px;">
+                                <i class="fa-solid fa-cloud-arrow-up me-1"></i>
+                                @(string.IsNullOrEmpty(Model.BannerUrl) ? "Tải lên ảnh" : "Cập nhật ảnh banner mới")
+                            </button>
+                        </form>
                     }
                     else if (Model.BannerStatus == DACS.Models.BannerStatus.PendingPayment)
                     {
@@ -451,14 +477,66 @@
             @* Map Card *@
             <div class="card-glass p-4">
                 <h3 class="section-subtitle mb-3">🗺 Vị trí</h3>
-                <div id="details-map" style="height:280px;border-radius:12px;border:1px solid var(--border)"></div>
+                <div id="details-map" style="height:280px;border-radius:12px;border:1px solid var(--border);transition:height .4s ease;"></div>
+
+                @* Route info bar (ẩn cho đến khi có route) *@
+                <div id="route-info-bar" style="display:none;margin-top:.75rem;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.25);border-radius:10px;padding:.7rem 1rem;font-size:.85rem;color:var(--text-primary);">
+                    <span id="route-summary"></span>
+                    <button onclick="clearRoute()" style="float:right;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.8rem;">✕ Xóa</button>
+                </div>
+
                 <div class="mt-3">
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=@Model.Latitude,@Model.Longitude"
-                       target="_blank" class="btn-outline-custom w-100 justify-content-center">
-                        <i class="fa-solid fa-signs-post me-2"></i>Chỉ đường (Google Maps)
-                    </a>
+                    <button id="btn-directions-detail" onclick="requestDirections()"
+                            class="btn-outline-custom w-100 justify-content-center">
+                        🧭 Chỉ đường đến đây
+                    </button>
                 </div>
             </div>
+
+        </div>
+    </div>
+</div>
+
+@* ── Bong bóng và Khung chat nổi (Real-time Chat Widget) ── *@
+<div class="chat-widget-container">
+    @* Bong bóng chat nổi *@
+    <button class="chat-widget-bubble" id="chat-bubble" onclick="toggleChatPanel()" style="display: none;" title="Trò chuyện với chủ quán">
+        <i class="fa-solid fa-comments"></i>
+        <span class="chat-badge d-none" id="chat-unread-badge">0</span>
+    </button>
+
+    @* Khung chat Glassmorphism *@
+    <div class="chat-widget-panel d-none animate-in" id="chat-panel">
+        @* Header *@
+        <div class="chat-panel-header">
+            <div class="d-flex align-items-center gap-2">
+                <button class="chat-back-btn d-none" id="chat-back-btn" onclick="backToConversations()" title="Quay lại danh sách">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="chat-header-avatar" id="chat-header-avatar">💬</div>
+                <div>
+                    <div class="chat-header-title" id="chat-header-title">Trò chuyện</div>
+                    <div class="chat-header-subtitle" id="chat-header-subtitle">Đang tải...</div>
+                </div>
+            </div>
+            <button class="chat-close-btn" onclick="toggleChatPanel()" title="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        @* Body *@
+        <div class="chat-panel-body" id="chat-panel-body">
+            @* Lịch sử tin nhắn hoặc danh sách hội thoại *@
+        </div>
+
+        @* Footer *@
+        <div class="chat-panel-footer d-none" id="chat-panel-footer">
+            <form id="chat-send-form" onsubmit="handleSendMessage(event)" class="d-flex gap-2 align-items-center w-100">
+                <input type="text" id="chat-input-message" class="form-control-custom" placeholder="Nhập tin nhắn..." autocomplete="off" required />
+                <button type="submit" class="chat-send-btn" id="chat-send-btn" title="Gửi tin nhắn">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -487,12 +565,133 @@
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    var map = L.map('details-map',{zoomControl:false}).setView([@Model.Latitude, @Model.Longitude], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-    L.control.zoom({position:'bottomright'}).addTo(map);
-    var customIcon = L.divIcon({className:'',html:'<div style="width:32px;height:32px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid rgba(255,255,255,.4);box-shadow:0 3px 10px rgba(0,0,0,.4);"><span style="display:block;transform:rotate(45deg);text-align:center;line-height:28px;font-size:14px;">@categoryIcon</span></div>',iconSize:[32,32],iconAnchor:[16,32]});
-    L.marker([@Model.Latitude, @Model.Longitude],{icon:customIcon}).addTo(map);
+    var placeLat = @Model.Latitude;
+    var placeLng = @Model.Longitude;
+    var map = L.map('details-map', { zoomControl: false }).setView([placeLat, placeLng], 16);
+
+    // Sync tile với theme sáng/tối
+    var isDark = document.documentElement.classList.contains('dark-theme');
+    var lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
+    var darkTiles  = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
+    (isDark ? darkTiles : lightTiles).addTo(map);
+    window.addEventListener('theme-changed', function(e) {
+        if (e.detail.theme === 'dark') { map.removeLayer(lightTiles); darkTiles.addTo(map); }
+        else { map.removeLayer(darkTiles); lightTiles.addTo(map); }
+    });
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Marker địa điểm
+    var catIcon = '@categoryIcon';
+    var customIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:32px;height:32px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid rgba(255,255,255,.4);box-shadow:0 3px 10px rgba(0,0,0,.4);"><span style="display:block;transform:rotate(45deg);text-align:center;line-height:28px;font-size:14px;">' + catIcon + '</span></div>',
+        iconSize: [32, 32], iconAnchor: [16, 32]
+    });
+    L.marker([placeLat, placeLng], { icon: customIcon }).addTo(map)
+     .bindPopup('<b>@Html.Raw(Model.Name.Replace("'","&#39;"))</b>');
+
+    // ── OSRM Routing ──────────────────────────────────────────────────────────
+    var routeLine  = null;
+    var userMarker = null;
+
+    function requestDirections() {
+        var btn = document.getElementById('btn-directions-detail');
+        if (!navigator.geolocation) {
+            showToast('Trình duyệt không hỗ trợ định vị.', 'warning');
+            return;
+        }
+        btn.textContent = '⏳ Đang lấy vị trí...';
+        btn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            var uLat = pos.coords.latitude;
+            var uLng = pos.coords.longitude;
+
+            // Marker vị trí người dùng
+            if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.circleMarker([uLat, uLng], {
+                radius: 9, color: '#3b82f6', fillColor: '#3b82f6',
+                fillOpacity: 1, weight: 3, opacity: 0.5
+            }).addTo(map).bindPopup('📍 Vị trí của bạn').openPopup();
+
+            btn.textContent = '⏳ Đang tính đường...';
+
+            // Gọi OSRM (miễn phí, không cần API key)
+            var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' +
+                uLng + ',' + uLat + ';' + placeLng + ',' + placeLat +
+                '?overview=full&geometries=geojson';
+
+            fetch(osrmUrl)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.routes || !data.routes.length) {
+                    showToast('Không tìm thấy đường đi. Vui lòng thử lại.', 'warning');
+                    resetBtn(); return;
+                }
+                var route  = data.routes[0];
+                var coords = route.geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
+
+                if (routeLine) map.removeLayer(routeLine);
+
+                // Vẽ đường đi màu cam
+                routeLine = L.polyline(coords, {
+                    color: '#f97316', weight: 5, opacity: 0.85,
+                    lineJoin: 'round', lineCap: 'round'
+                }).addTo(map);
+
+                // Mở rộng bản đồ
+                var mapEl = document.getElementById('details-map');
+                mapEl.style.height = '420px';
+                setTimeout(function() {
+                    map.invalidateSize();
+                    map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+                }, 420);
+
+                // Hiển thị tóm tắt tuyến đường
+                var distKm  = (route.distance / 1000).toFixed(1);
+                var durMin  = Math.ceil(route.duration / 60);
+                var durText = durMin >= 60
+                    ? Math.floor(durMin / 60) + ' giờ ' + (durMin % 60) + ' phút'
+                    : durMin + ' phút';
+                document.getElementById('route-summary').innerHTML =
+                    '🚗 <strong>' + distKm + ' km</strong>&nbsp;·&nbsp;⏱ <strong>' + durText + '</strong> lái xe';
+                document.getElementById('route-info-bar').style.display = 'block';
+
+                btn.textContent = '🔄 Tính lại đường';
+                btn.disabled = false;
+            })
+            .catch(function() {
+                showToast('Lỗi kết nối dịch vụ bản đồ. Vui lòng thử lại.', 'error');
+                resetBtn();
+            });
+        }, function(err) {
+            var msg = err.code === 1
+                ? 'Bạn đã từ chối quyền định vị. Vui lòng cho phép trong cài đặt trình duyệt.'
+                : 'Không lấy được vị trí hiện tại.';
+            showToast(msg, 'warning');
+            resetBtn();
+        }, { timeout: 10000, enableHighAccuracy: true });
+    }
+
+    function clearRoute() {
+        if (routeLine)  { map.removeLayer(routeLine);  routeLine = null; }
+        if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+        document.getElementById('route-info-bar').style.display = 'none';
+        document.getElementById('details-map').style.height = '280px';
+        setTimeout(function() {
+            map.invalidateSize();
+            map.setView([placeLat, placeLng], 16);
+        }, 420);
+        resetBtn();
+    }
+
+    function resetBtn() {
+        var btn = document.getElementById('btn-directions-detail');
+        if (btn) { btn.textContent = '🧭 Chỉ đường đến đây'; btn.disabled = false; }
+    }
 </script>
+
 <script>
 (function(){
     var hints=['','Tệ','Không hay','Bình thường','Tốt','Tuyệt vời'];
@@ -768,5 +967,390 @@ function loadAiSummary(force) {
     });
     </text>
 }
+</script>
+
+@* ── Thư viện SignalR & Logic Chat thời gian thực ── *@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+<script>
+(function() {
+    var isAuthenticated = @(User.Identity!.IsAuthenticated ? "true" : "false");
+    var currentUserId = "@currentUser?.Id";
+    var placeId = @Model.Id;
+    var placeOwnerId = "@Model.OwnerId";
+    var isOwner = @(User.Identity!.IsAuthenticated && Model.OwnerId == currentUser?.Id ? "true" : "false");
+
+    var bubble = document.getElementById("chat-bubble");
+    var panel = document.getElementById("chat-panel");
+    var body = document.getElementById("chat-panel-body");
+    var footer = document.getElementById("chat-panel-footer");
+    var headerTitle = document.getElementById("chat-header-title");
+    var headerSubtitle = document.getElementById("chat-header-subtitle");
+    var backBtn = document.getElementById("chat-back-btn");
+    var headerAvatar = document.getElementById("chat-header-avatar");
+    var unreadBadge = document.getElementById("chat-unread-badge");
+
+    // Chỉ hiển thị bong bóng chat nếu quán có chủ quán và người dùng hiện tại không phải chủ quán tự chat với chính mình
+    if (placeOwnerId && placeOwnerId !== "") {
+        bubble.style.display = "flex";
+    }
+
+    var connection = null;
+    var isChatOpen = false;
+    var activeChatCustomerId = null; // Chỉ dùng cho chủ quán (owner)
+
+    // Khởi tạo kết nối SignalR nếu đã đăng nhập
+    if (isAuthenticated) {
+        connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveMessage", function (message) {
+            if (message.placeId !== placeId) return; // Không thuộc địa điểm này
+
+            if (isOwner) {
+                // Nếu là chủ quán đang mở cuộc trò chuyện với khách hàng gửi tin nhắn
+                var targetId = message.senderId === currentUserId ? message.receiverId : message.senderId;
+                if (activeChatCustomerId === targetId) {
+                    appendMessage(message);
+                    scrollToBottom();
+                    markAsReadApi(targetId);
+                } else {
+                    // Update danh sách hội thoại và badge số tin nhắn chưa đọc
+                    if (isChatOpen && !activeChatCustomerId) {
+                        loadConversations();
+                    }
+                    updateTotalUnreadBadge();
+                }
+            } else {
+                // Khách hàng nhận tin nhắn
+                if (message.senderId === currentUserId || message.receiverId === currentUserId) {
+                    if (isChatOpen) {
+                        appendMessage(message);
+                        scrollToBottom();
+                        markAsReadApi(placeOwnerId);
+                    } else {
+                        updateTotalUnreadBadge();
+                    }
+                }
+            }
+        });
+
+        connection.start()
+            .then(function() {
+                updateTotalUnreadBadge();
+            })
+            .catch(function(err) {
+                console.error("SignalR Connection Error: ", err);
+            });
+    }
+
+    window.toggleChatPanel = function() {
+        if (!isAuthenticated) {
+            panel.classList.toggle("d-none");
+            isChatOpen = !panel.classList.contains("d-none");
+            if (isChatOpen) {
+                showUnauthenticatedMessage();
+            }
+            return;
+        }
+
+        panel.classList.toggle("d-none");
+        isChatOpen = !panel.classList.contains("d-none");
+
+        if (isChatOpen) {
+            if (isOwner) {
+                backToConversations();
+            } else {
+                openCustomerChat();
+            }
+        }
+    };
+
+    window.backToConversations = function() {
+        activeChatCustomerId = null;
+        headerTitle.textContent = "Hội thoại";
+        headerSubtitle.textContent = "Khách hàng của quán";
+        headerAvatar.textContent = "💬";
+        backBtn.classList.add("d-none");
+        footer.classList.add("d-none");
+
+        loadConversations();
+    };
+
+    function showUnauthenticatedMessage() {
+        backBtn.classList.add("d-none");
+        footer.classList.add("d-none");
+        headerTitle.textContent = "Trò chuyện";
+        headerSubtitle.textContent = "Khách vãng lai";
+        headerAvatar.textContent = "💬";
+
+        body.innerHTML = `
+            <div class="chat-unauth-container text-center py-5">
+                <div class="chat-unauth-icon mb-3" style="font-size: 3rem;">💬</div>
+                <h5 class="fw-bold mb-2">Trò chuyện với chủ quán</h5>
+                <p class="text-muted small px-4 mb-4">Vui lòng đăng nhập để gửi tin nhắn thắc mắc, đặt bàn hoặc hỏi tiện ích dịch vụ.</p>
+                <a href="/Identity/Account/Login?returnUrl=${encodeURIComponent(window.location.pathname)}" class="btn-primary-custom px-4 py-2" style="text-decoration:none; display:inline-block; font-size:0.9rem; border-radius:20px;">Đăng nhập ngay</a>
+            </div>
+        `;
+    }
+
+    function openCustomerChat() {
+        activeChatCustomerId = placeOwnerId;
+        headerTitle.textContent = "Chủ quán";
+        headerSubtitle.textContent = "Hỗ trợ khách hàng";
+        headerAvatar.textContent = "👤";
+        backBtn.classList.add("d-none");
+        footer.classList.remove("d-none");
+
+        loadMessages(placeOwnerId);
+        markAsReadApi(placeOwnerId);
+    }
+
+    function openOwnerChat(customerId, customerEmail) {
+        activeChatCustomerId = customerId;
+        headerTitle.textContent = customerEmail.split("@@")[0];
+        headerSubtitle.textContent = "Khách hàng";
+        headerAvatar.textContent = customerEmail.substring(0, 1).toUpperCase();
+        backBtn.classList.remove("d-none");
+        footer.classList.remove("d-none");
+
+        loadMessages(customerId);
+        markAsReadApi(customerId);
+    }
+
+    function loadConversations() {
+        body.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center h-100">
+                <div class="spinner-border text-primary spinner-border-sm" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+            </div>
+        `;
+
+        fetch(`/api/chat/conversations?placeId=${placeId}`)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                body.innerHTML = "";
+                if (data.conversations.length === 0) {
+                    body.innerHTML = `
+                        <div class="text-center text-muted py-5 small chat-empty-state">
+                            Chưa có cuộc trò chuyện nào từ khách hàng.
+                        </div>
+                    `;
+                } else {
+                    data.conversations.forEach(function(conv) {
+                        var convDiv = document.createElement("div");
+                        convDiv.className = `chat-conversation-item ${conv.unreadCount > 0 ? "unread" : ""}`;
+                        convDiv.onclick = function() {
+                            openOwnerChat(conv.customerId, conv.customerEmail);
+                        };
+
+                        var charAvatar = conv.customerEmail.substring(0, 1).toUpperCase();
+
+                        convDiv.innerHTML = `
+                            <div class="chat-conv-avatar">${charAvatar}</div>
+                            <div class="chat-conv-info">
+                                <div class="chat-conv-header">
+                                    <span class="chat-conv-name">${escapeHtml(conv.customerEmail)}</span>
+                                    <span class="chat-conv-time">${conv.lastMessageTime}</span>
+                                </div>
+                                <div class="chat-conv-body">
+                                    <span class="chat-conv-last-msg">${escapeHtml(conv.lastMessageContent)}</span>
+                                    ${conv.unreadCount > 0 ? `<span class="chat-conv-unread-badge">${conv.unreadCount}</span>` : ""}
+                                </div>
+                            </div>
+                        `;
+                        body.appendChild(convDiv);
+                    });
+                }
+            } else {
+                body.innerHTML = `<div class="text-danger small p-3">Lỗi: ${data.message || 'Không thể tải hội thoại.'}</div>`;
+            }
+        })
+        .catch(function() {
+            body.innerHTML = `<div class="text-danger small p-3">Lỗi kết nối máy chủ.</div>`;
+        });
+    }
+
+    function loadMessages(customerId) {
+        body.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center h-100">
+                <div class="spinner-border text-primary spinner-border-sm" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+            </div>
+        `;
+
+        fetch(`/api/chat/messages?placeId=${placeId}&customerId=${customerId}`)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                body.innerHTML = "";
+                if (data.messages.length === 0) {
+                    body.innerHTML = `
+                        <div class="text-center text-muted py-5 small chat-empty-state">
+                            Bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn đầu tiên!
+                        </div>
+                    `;
+                } else {
+                    data.messages.forEach(function(msg) {
+                        appendMessage(msg);
+                    });
+                    scrollToBottom();
+                }
+            } else {
+                body.innerHTML = `<div class="text-danger small p-3">Lỗi: ${data.message || 'Không thể tải tin nhắn.'}</div>`;
+            }
+        })
+        .catch(function() {
+            body.innerHTML = `<div class="text-danger small p-3">Lỗi kết nối máy chủ.</div>`;
+        });
+    }
+
+    function appendMessage(msg) {
+        var emptyState = body.querySelector(".chat-empty-state");
+        if (emptyState) {
+            body.innerHTML = "";
+        }
+
+        var isMyMsg = msg.senderId === currentUserId;
+        var bubbleClass = isMyMsg ? "chat-msg-outgoing" : "chat-msg-incoming";
+
+        var msgDiv = document.createElement("div");
+        msgDiv.className = `chat-message-row ${bubbleClass}`;
+        msgDiv.innerHTML = `
+            <div class="chat-message-bubble" title="${msg.sentAt}">
+                <div class="chat-message-content">${escapeHtml(msg.content)}</div>
+                <div class="chat-message-time">${msg.sentAt.split(" ")[1]}</div>
+            </div>
+        `;
+        body.appendChild(msgDiv);
+    }
+
+    window.handleSendMessage = function(event) {
+        event.preventDefault();
+        var input = document.getElementById("chat-input-message");
+        var content = input.value.trim();
+        if (!content) return;
+
+        input.value = "";
+        var targetReceiverId = isOwner ? activeChatCustomerId : placeOwnerId;
+
+        var formData = new FormData();
+        formData.append("placeId", placeId);
+        formData.append("receiverId", targetReceiverId);
+        formData.append("content", content);
+
+        var sendBtn = document.getElementById("chat-send-btn");
+        sendBtn.disabled = true;
+
+        fetch("/api/chat/send", {
+            method: "POST",
+            body: formData,
+            headers: {
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            sendBtn.disabled = false;
+            if (!data.success) {
+                toastHelper(data.message || "Không thể gửi tin nhắn.", "error");
+            }
+        })
+        .catch(function() {
+            sendBtn.disabled = false;
+            toastHelper("Không thể kết nối đến máy chủ để gửi tin nhắn.", "error");
+        });
+    };
+
+    function markAsReadApi(customerId) {
+        var formData = new FormData();
+        formData.append("placeId", placeId);
+        formData.append("customerId", customerId);
+
+        fetch("/api/chat/read", {
+            method: "POST",
+            body: formData,
+            headers: {
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                updateTotalUnreadBadge();
+            }
+        });
+    }
+
+    function updateTotalUnreadBadge() {
+        if (!isAuthenticated) return;
+
+        if (isOwner) {
+            fetch(`/api/chat/conversations?placeId=${placeId}`)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var totalUnread = data.conversations.reduce(function(sum, conv) { return sum + conv.unreadCount; }, 0);
+                    if (totalUnread > 0) {
+                        unreadBadge.textContent = totalUnread;
+                        unreadBadge.classList.remove("d-none");
+                    } else {
+                        unreadBadge.classList.add("d-none");
+                    }
+                }
+            });
+        } else {
+            fetch(`/api/chat/messages?placeId=${placeId}`)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var totalUnread = data.messages.filter(function(msg) {
+                        return msg.senderId === placeOwnerId && !msg.isRead;
+                    }).length;
+                    if (totalUnread > 0) {
+                        unreadBadge.textContent = totalUnread;
+                        unreadBadge.classList.remove("d-none");
+                    } else {
+                        unreadBadge.classList.add("d-none");
+                    }
+                }
+            });
+        }
+    }
+
+    function scrollToBottom() {
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        var map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    function toastHelper(msg, type) {
+        if (typeof showToast === 'function') {
+            showToast(msg, type);
+        } else if (typeof showDetailsToast === 'function') {
+            showDetailsToast(msg, type === 'error' ? '❌' : '⚠️');
+        } else {
+            alert(msg);
+        }
+    }
+
+    // Tự động kiểm tra tin nhắn chưa đọc khi load trang
+    if (isAuthenticated) {
+        updateTotalUnreadBadge();
+    }
+})();
 </script>
 }

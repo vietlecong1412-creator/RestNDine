@@ -15,6 +15,19 @@
     .lightbox-close { position:fixed;top:1.5rem;right:1.5rem;color:#fff;font-size:2rem;cursor:pointer;opacity:.7;transition:opacity .2s; }
     .lightbox-close:hover { opacity:1; }
     .pending-count-badge { display:inline-flex;align-items:center;justify-content:center;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;font-size:.8rem;font-weight:700;border-radius:999px;padding:.2rem .7rem;margin-left:.5rem; }
+    /* Bảng cuộn nội tại – thanh trượt ngang luôn hiển thị */
+    .table-responsive {
+        overflow: auto;
+        max-height: calc(100vh - 220px);
+        border-radius: 0 0 var(--radius, 12px) var(--radius, 12px);
+    }
+    .table-responsive thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--surface-light, #1e293b);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.08);
+    }
 </style>
 
 <div class="admin-container animate-in">
@@ -86,7 +99,18 @@
                                 </td>
                                 <td>
                                     @if (!string.IsNullOrEmpty(p.PaymentProofUrl))
-                                    { <img src="@p.PaymentProofUrl" class="proof-thumb" onclick="openLightbox('@p.PaymentProofUrl')" title="Xem biên lai" alt="Biên lai" /> }
+                                    {
+                                        if (p.PaymentProofUrl.StartsWith("vnpay:"))
+                                        {
+                                            <span class="badge" style="background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.3);font-size:.8rem;padding:.3rem .6rem;">
+                                                💳 VNPay: @p.PaymentProofUrl.Substring(6)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <img src="@p.PaymentProofUrl" class="proof-thumb" onclick="openLightbox('@p.PaymentProofUrl')" title="Xem biên lai" alt="Biên lai" />
+                                        }
+                                    }
                                     else { <span style="color:#ef4444;font-size:.8rem;">⚠️ Thiếu biên lai</span> }
                                 </td>
                                 <td>

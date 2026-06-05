@@ -28,9 +28,11 @@ builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSe
 
 builder.Services.AddRazorPages();
 builder.Services.AddMemoryCache();
+builder.Services.AddSignalR();
 
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<IAiSummaryService, LocalAiSummaryService>();
+builder.Services.AddScoped<DACS.Services.VnPayService>();
 
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
@@ -110,4 +112,5 @@ app.MapControllerRoute(
 
 app.MapControllers();
 app.MapRazorPages();
+app.MapHub<DACS.Hubs.ChatHub>("/chatHub");
 app.Run();

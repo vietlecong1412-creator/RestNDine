@@ -7,20 +7,123 @@
 <style>
     .address-cell { white-space: normal !important; max-width: 280px; min-width: 160px; line-height: 1.5; color: var(--text-secondary); }
     .name-cell    { white-space: normal !important; max-width: 200px; min-width: 130px; line-height: 1.5; }
+    /* Bảng cuộn nội tại – thanh trượt ngang luôn hiển thị */
+    .table-responsive {
+        overflow: auto;
+        max-height: calc(100vh - 320px);
+        border-radius: 0 0 var(--radius, 12px) var(--radius, 12px);
+    }
+    .table-responsive thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--surface-light, #1e293b);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.08);
+    }
+    /* Thanh toolbar lọc */
+    .admin-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-card);
+        border-radius: var(--radius, 12px) var(--radius, 12px) 0 0;
+    }
+    .admin-search-box {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        background: rgba(255,255,255,.06);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: .45rem .85rem;
+        flex: 1;
+        min-width: 200px;
+    }
+    .admin-search-box input {
+        background: none;
+        border: none;
+        outline: none;
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+        font-size: .88rem;
+        width: 100%;
+    }
+    .admin-search-box input::placeholder { color: var(--text-muted); }
+    .admin-filter-select {
+        background: rgba(255,255,255,.06);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text-secondary);
+        font-family: 'Inter', sans-serif;
+        font-size: .84rem;
+        padding: .45rem .85rem;
+        outline: none;
+        cursor: pointer;
+    }
+    .admin-filter-select:focus { border-color: var(--primary); }
+    .admin-result-info {
+        font-size: .82rem;
+        color: var(--text-muted);
+        margin-left: auto;
+        white-space: nowrap;
+    }
+    /* Phân trang */
+    .pagination-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+        padding: .85rem 1.25rem;
+        border-top: 1px solid var(--border);
+        flex-wrap: wrap;
+    }
+    .page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.05);
+        color: var(--text-secondary);
+        font-size: .82rem;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+        transition: all .2s ease;
+        padding: 0 .6rem;
+    }
+    .page-btn:hover:not(:disabled) {
+        background: rgba(249,115,22,.12);
+        border-color: rgba(249,115,22,.4);
+        color: var(--primary);
+    }
+    .page-btn.active {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        border-color: transparent;
+        color: #fff;
+        box-shadow: 0 2px 8px var(--primary-glow);
+    }
+    .page-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .page-info { font-size: .8rem; color: var(--text-muted); padding: 0 .35rem; }
 </style>
 
 <div class="admin-container animate-in">
     <div class="section-header">
         <h1 class="section-title">
             <span class="icon">📍</span> Quản lý địa điểm
-            <span class="badge-count">@Model.Count() địa điểm</span>
+            <span class="badge-count" id="total-badge">@Model.Count() địa điểm</span>
         </h1>
         <a asp-action="Create" class="btn-primary-custom">
             <span>➕</span> Thêm địa điểm mới
         </a>
     </div>
 
-    <div class="card-glass">
+    <div class="card-glass p-0">
         @if (!Model.Any())
         {
             <div class="empty-state">
@@ -32,8 +135,28 @@
         }
         else
         {
+            @* ── Toolbar: Tìm kiếm + Lọc ── *@
+            <div class="admin-toolbar">
+                <div class="admin-search-box">
+                    <span>🔍</span>
+                    <input type="text" id="admin-search" placeholder="Tìm theo tên địa điểm, địa chỉ..." autocomplete="off" />
+                </div>
+                <select id="filter-type" class="admin-filter-select">
+                    <option value="">🗺️ Tất cả loại</option>
+                    <option value="restaurant">🍴 Nhà hàng</option>
+                    <option value="cafe">☕ Quán Cafe</option>
+                    <option value="hotel">🏨 Khách sạn</option>
+                </select>
+                <select id="filter-status" class="admin-filter-select">
+                    <option value="">📋 Tất cả trạng thái</option>
+                    <option value="approved">✅ Đã duyệt</option>
+                    <option value="pending">🕒 Chờ duyệt</option>
+                </select>
+                <span class="admin-result-info" id="result-info">Đang tải...</span>
+            </div>
+
             <div class="table-responsive">
-                <table class="table-custom text-nowrap">
+                <table class="table-custom text-nowrap" id="places-table">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -46,10 +169,13 @@
                             <th class="text-end">Hành động</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="places-tbody">
                         @foreach (var p in Model)
                         {
-                            <tr>
+                            <tr data-name="@p.Name.ToLower()"
+                                data-address="@(p.Address?.ToLower() ?? "")"
+                                data-category="@(p.Category?.Name?.ToLower() ?? "")"
+                                data-approved="@(p.IsApproved ? "approved" : "pending")">
                                 <td style="color:var(--text-muted)">#@p.Id</td>
                                 <td class="name-cell"><strong style="color:var(--text-primary)">@p.Name</strong></td>
                                 <td>
@@ -91,6 +217,9 @@
                     </tbody>
                 </table>
             </div>
+
+            @* ── Phân trang ── *@
+            <div class="pagination-bar" id="pagination-bar"></div>
         }
     </div>
 </div>
@@ -112,13 +241,125 @@
 
 @section Scripts {
 <script>
-    function confirmDelete(id, name) {
-        document.getElementById('delId').value = id;
-        document.getElementById('delName').textContent = name;
-        document.getElementById('deleteModal').style.display = 'flex';
+(function () {
+    const PAGE_SIZE = 20;
+    let currentPage = 1;
+    let filteredRows = [];
+
+    const searchInput  = document.getElementById('admin-search');
+    const filterType   = document.getElementById('filter-type');
+    const filterStatus = document.getElementById('filter-status');
+    const resultInfo   = document.getElementById('result-info');
+    const paginationBar = document.getElementById('pagination-bar');
+    const allRows = Array.from(document.querySelectorAll('#places-tbody tr'));
+
+    function applyFilters() {
+        const q        = searchInput.value.toLowerCase().trim();
+        const typeVal  = filterType.value.toLowerCase();
+        const statusVal = filterStatus.value;
+
+        filteredRows = allRows.filter(row => {
+            const name    = row.dataset.name    || '';
+            const address = row.dataset.address || '';
+            const category = row.dataset.category || '';
+            const approved = row.dataset.approved || '';
+
+            // Text search
+            if (q && !name.includes(q) && !address.includes(q)) return false;
+
+            // Type filter (map option values to category keywords)
+            if (typeVal) {
+                if (typeVal === 'restaurant' && !category.includes('nhà hàng') && !category.includes('quan an') && !category.includes('quán ăn')) return false;
+                if (typeVal === 'cafe' && !category.includes('cafe') && !category.includes('cà phê') && !category.includes('tra sua') && !category.includes('trà sữa')) return false;
+                if (typeVal === 'hotel' && !category.includes('khách sạn') && !category.includes('hotel')) return false;
+            }
+
+            // Status filter
+            if (statusVal && approved !== statusVal) return false;
+
+            return true;
+        });
+
+        currentPage = 1;
+        renderPage();
     }
-    function closeDelete() {
-        document.getElementById('deleteModal').style.display = 'none';
+
+    function renderPage() {
+        const total = filteredRows.length;
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        currentPage = Math.min(currentPage, totalPages);
+
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const end   = Math.min(start + PAGE_SIZE, total);
+
+        // Show/hide rows
+        allRows.forEach(r => r.style.display = 'none');
+        filteredRows.slice(start, end).forEach(r => r.style.display = '');
+
+        // Result info
+        if (total === 0) {
+            resultInfo.textContent = 'Không tìm thấy địa điểm nào';
+        } else {
+            resultInfo.textContent = `Hiển thị ${start + 1}–${end} trong ${total} địa điểm`;
+        }
+
+        renderPagination(totalPages);
     }
+
+    function renderPagination(totalPages) {
+        if (totalPages <= 1) { paginationBar.innerHTML = ''; return; }
+
+        let html = '';
+        html += `<button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹ Trước</button>`;
+
+        // Page number buttons (show up to 7)
+        const range = pageRange(currentPage, totalPages);
+        let prev = null;
+        range.forEach(p => {
+            if (prev !== null && p - prev > 1) html += `<span class="page-info">…</span>`;
+            html += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+            prev = p;
+        });
+
+        html += `<button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Sau ›</button>`;
+        paginationBar.innerHTML = html;
+    }
+
+    function pageRange(current, total) {
+        const delta = 2;
+        const pages = [];
+        for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
+            pages.push(i);
+        }
+        if (pages[0] > 1) pages.unshift(1);
+        if (pages[pages.length - 1] < total) pages.push(total);
+        return pages;
+    }
+
+    window.goPage = function(p) {
+        const totalPages = Math.ceil(filteredRows.length / PAGE_SIZE);
+        if (p < 1 || p > totalPages) return;
+        currentPage = p;
+        renderPage();
+        document.querySelector('.card-glass').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // Event listeners
+    searchInput.addEventListener('input', applyFilters);
+    filterType.addEventListener('change', applyFilters);
+    filterStatus.addEventListener('change', applyFilters);
+
+    // Init
+    applyFilters();
+})();
+
+function confirmDelete(id, name) {
+    document.getElementById('delId').value = id;
+    document.getElementById('delName').textContent = name;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+function closeDelete() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
 </script>
 }

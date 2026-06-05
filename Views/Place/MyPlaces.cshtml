@@ -4,6 +4,22 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<style>
+    /* Bảng cuộn nội tại – thanh trượt ngang luôn hiển thị */
+    .table-responsive {
+        overflow: auto;
+        max-height: calc(100vh - 220px);
+        border-radius: 0 0 var(--radius, 12px) var(--radius, 12px);
+    }
+    .table-responsive thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--surface-light, #1e293b);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.08);
+    }
+</style>
+
 <div class="admin-container animate-in">
     <div class="section-header">
         <h1 class="section-title">
@@ -97,7 +113,7 @@
                                     <div class="d-flex gap-2 justify-content-end">
                                         <a asp-action="Details" asp-route-id="@item.Id" class="btn-icon" title="Xem chi tiết">👁️</a>
                                         <a asp-action="Edit" asp-route-id="@item.Id" class="btn-icon text-primary" title="Sửa">✏️</a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn-icon text-danger" title="Xóa">🗑️</a>
+                                        <button onclick="confirmDeletePlace(@item.Id, '@item.Name.Replace("'", "\\'")' )" class="btn-icon text-danger" title="Xóa" style="border:none;background:none;cursor:pointer;">🗑️</button>
                                     </div>
                                 </td>
                             </tr>
@@ -108,3 +124,31 @@
         }
     </div>
 </div>
+
+@* Modal Xóa địa điểm *@
+<div id="deleteModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-title">⚠️ Xác nhận xóa</div>
+        <div class="modal-desc">Bạn có chắc chắn muốn xóa địa điểm "<b id="delPlaceName"></b>" không?<br /><span style="color:#ef4444;font-size:.85rem;">Hành động này không thể hoàn tác và sẽ xóa toàn bộ ảnh, bình luận liên quan.</span></div>
+        <div class="modal-actions">
+            <button onclick="closeDeletePlace()" class="btn-outline-custom">Hủy</button>
+            <form id="delPlaceForm" method="post" asp-action="Delete" asp-controller="Place">
+                <input type="hidden" name="id" id="delPlaceId" />
+                <button type="submit" class="btn-primary-custom" style="background:#ef4444;">🗑 Xóa địa điểm</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function confirmDeletePlace(id, name) {
+    document.getElementById('delPlaceId').value = id;
+    document.getElementById('delPlaceName').textContent = name;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+function closeDeletePlace() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
+</script>
+}

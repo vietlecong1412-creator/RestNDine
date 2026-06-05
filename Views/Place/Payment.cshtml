@@ -6,10 +6,20 @@
     var bankId      = "970436";   // Vietcombank
     var accountNo   = "0001028780";
     var accountName = "LE CONG VIET";
-    var amount      = 10000;
+    var amount      = 100000;
     var description = $"Quang cao {Model.Id}";
     var qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-compact2.png" +
                 $"?amount={amount}&addInfo={Uri.EscapeDataString(description)}&accountName={Uri.EscapeDataString(accountName)}";
+}
+
+@if (TempData["Error"] != null)
+{
+    <div style="max-width:960px;margin:1rem auto 0;padding:0 1rem;">
+        <div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:12px;padding:.85rem 1.1rem;color:#fca5a5;font-size:.88rem;display:flex;gap:.6rem;align-items:center;">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>@TempData["Error"]</span>
+        </div>
+    </div>
 }
 
 <style>
@@ -541,6 +551,111 @@
     @@keyframes fadeOut {
         to { opacity: 0; transform: translateX(40px); }
     }
+
+    /* ── Payment Method Tabs ──────────────────────────── */
+    .method-tabs {
+        display: flex;
+        gap: .5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .method-tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        padding: .75rem 1rem;
+        border-radius: 12px;
+        border: 2px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.02);
+        color: #64748b;
+        font-size: .85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .2s;
+    }
+
+    .method-tab:hover {
+        border-color: rgba(255,255,255,0.15);
+        color: #94a3b8;
+    }
+
+    .method-tab.active-bank {
+        border-color: rgba(34,197,94,0.45);
+        background: rgba(34,197,94,0.06);
+        color: #4ade80;
+    }
+
+    .method-tab.active-vnpay {
+        border-color: rgba(0,136,204,0.5);
+        background: rgba(0,136,204,0.07);
+        color: #38bdf8;
+    }
+
+    .vnpay-logo {
+        height: 20px;
+        vertical-align: middle;
+        filter: brightness(0) invert(1) opacity(.8);
+    }
+
+    .btn-vnpay {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .6rem;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #0088cc, #005fa3);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: .95rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all .25s;
+        box-shadow: 0 4px 20px rgba(0,136,204,0.35);
+        margin-top: .5rem;
+    }
+
+    .btn-vnpay:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0,136,204,0.5);
+        color: #fff;
+    }
+
+    .vnpay-note {
+        margin-top: 1rem;
+        padding: .8rem 1rem;
+        background: rgba(0,136,204,0.05);
+        border: 1px solid rgba(0,136,204,0.15);
+        border-radius: 10px;
+        font-size: .78rem;
+        color: #64748b;
+        line-height: 1.65;
+    }
+
+    .vnpay-note strong { color: #38bdf8; }
+
+    .method-panel { display: none; }
+    .method-panel.active { display: block; }
+
+    .vnpay-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        background: rgba(0,136,204,0.1);
+        border: 1px solid rgba(0,136,204,0.3);
+        color: #38bdf8;
+        padding: .35rem .9rem;
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .8px;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }
 </style>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -548,79 +663,65 @@
 <div class="payment-wrapper">
     <div class="payment-grid">
 
-        <!-- ══ LEFT: QR + Bank Info ══ -->
+        <!-- ══ LEFT: Place & Ad Campaign Info ══ -->
         <div class="pay-card">
             <div class="pay-badge">
                 <i class="fa-solid fa-bullhorn"></i>
-                Thanh toán quảng cáo
+                Chi tiết chiến dịch
             </div>
 
-            <div class="pay-title">Đặt banner cho <em>@Model.Name</em></div>
+            <div class="pay-title">Quảng cáo cho <em>@Model.Name</em></div>
             <div class="pay-subtitle">
-                Quét mã QR bên dưới để thanh toán. Banner sẽ hiển thị trên trang chủ sau khi Admin xác nhận.
+                Thông tin chiến dịch đặt banner quảng cáo của địa điểm.
             </div>
 
-            <!-- QR -->
-            <div class="qr-outer">
-                <div class="qr-glow"></div>
-                <div class="qr-frame">
-                    <div class="qr-skeleton" id="qrSkeleton"></div>
-                    <img id="qrImg"
-                         src="@qrUrl"
-                         alt="QR thanh toán Vietcombank"
-                         style="display:none; width:200px; height:200px; border-radius:8px;"
-                         onload="document.getElementById('qrSkeleton').style.display='none'; this.style.display='block';"
-                         onerror="document.getElementById('qrSkeleton').innerHTML='<div style=\'color:#ef4444;font-size:.78rem;padding:1.2rem;text-align:center;\'>Không tải được QR.<br/>Vui lòng CK thủ công.</div>';" />
-                </div>
-            </div>
-
-            <!-- Bank rows -->
-            <div class="bank-table">
-                <div class="bank-row">
-                    <span class="bank-label">Ngân hàng</span>
-                    <span class="bank-value">🏦 Vietcombank (VCB)</span>
-                </div>
-                <div class="bank-row">
-                    <span class="bank-label">Số tài khoản</span>
-                    <span style="display:flex;align-items:center;">
-                        <span class="bank-value green" id="accNo">@accountNo</span>
-                        <button class="copy-btn" onclick="copyText('@accountNo', this)" title="Sao chép">
-                            <i class="fa-regular fa-copy"></i>
-                        </button>
-                    </span>
-                </div>
-                <div class="bank-row">
-                    <span class="bank-label">Chủ tài khoản</span>
-                    <span class="bank-value">@accountName</span>
-                </div>
-                <div class="bank-row">
-                    <span class="bank-label">Số tiền</span>
-                    <span class="bank-value yellow">10,000 VNĐ</span>
-                </div>
-                <div class="bank-row">
-                    <span class="bank-label">Nội dung CK</span>
-                    <span style="display:flex;align-items:center;">
-                        <span class="bank-value" id="ckContent" style="font-family:'Courier New',monospace;font-size:.82rem;">Quang cao @Model.Id</span>
-                        <button class="copy-btn" onclick="copyText('Quang cao @Model.Id', this)" title="Sao chép">
-                            <i class="fa-regular fa-copy"></i>
-                        </button>
-                    </span>
+            <!-- Place Thumbnail Preview -->
+            <div style="border-radius:16px; overflow:hidden; margin-bottom:1.5rem; border:1px solid rgba(255,255,255,0.08); position:relative; aspect-ratio:16/9; background:#1e293b;">
+                @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                {
+                    <img src="@Model.ImageUrl" alt="@Model.Name" style="width:100%; height:100%; object-fit:cover;" />
+                }
+                else
+                {
+                    <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#475569; font-size:2rem;">
+                        <i class="fa-solid fa-image"></i>
+                    </div>
+                }
+                <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(0,0,0,0.85)); padding:1rem; color:#fff;">
+                    <div style="font-weight:700; font-size:1.1rem; text-shadow:0 2px 4px rgba(0,0,0,0.5);">@Model.Name</div>
+                    <div style="font-size:0.75rem; color:#cbd5e1; display:flex; align-items:center; gap:0.4rem; margin-top:0.2rem;">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:260px;">@Model.Address</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Steps -->
-            <div class="steps-label">Hướng dẫn thanh toán</div>
-            <div class="step-item">
-                <div class="step-num">1</div>
-                <div class="step-text">Mở app ngân hàng → <strong style="color:#e2e8f0;">Quét mã QR</strong> hoặc chuyển khoản thủ công.</div>
+            <!-- Ad Package Table -->
+            <div class="bank-table" style="margin-bottom:1.5rem;">
+                <div class="bank-row">
+                    <span class="bank-label">Dịch vụ</span>
+                    <span class="bank-value">Banner trang chủ (Premium)</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Thời hạn</span>
+                    <span class="bank-value green">30 ngày (Gia hạn tự động)</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Kích thước banner</span>
+                    <span class="bank-value">1200 × 400 px</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Đơn giá</span>
+                    <span class="bank-value yellow">100,000 VNĐ</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Trạng thái</span>
+                    <span class="bank-value" style="color:#fbbf24; font-weight:700;">Chờ thanh toán</span>
+                </div>
             </div>
-            <div class="step-item">
-                <div class="step-num">2</div>
-                <div class="step-text">Nhập đúng nội dung: <strong style="color:#fbbf24; font-family:'Courier New',monospace;">Quang cao @Model.Id</strong></div>
-            </div>
-            <div class="step-item">
-                <div class="step-num">3</div>
-                <div class="step-text">Bấm <strong style="color:#4ade80;">"Đã thanh toán"</strong>, upload ảnh banner và ảnh biên lai để Admin duyệt.</div>
+
+            <div class="pay-note" style="margin-top:0;">
+                <strong>Lợi ích quảng cáo:</strong> Banner của bạn sẽ được hiển thị nổi bật ở đầu trang chủ, tiếp cận trực tiếp hàng ngàn lượt khách hàng truy cập mỗi ngày.
             </div>
         </div>
 
@@ -631,115 +732,267 @@
                     <div class="status-dot"></div>
                     Đang chờ thanh toán
                 </div>
-                <div class="pay-title" style="font-size:1.2rem;">Xác nhận & Tải lên</div>
-                <div class="pay-subtitle" style="margin-bottom:0;">Sau khi chuyển khoản thành công, điền thông tin bên dưới.</div>
+                <div class="pay-title" style="font-size:1.2rem;">Cấu hình & Thanh toán</div>
+                <div class="pay-subtitle" style="margin-bottom:1rem;">Tải lên ảnh banner quảng cáo và hoàn tất thanh toán.</div>
             </div>
 
-            <!-- Step 1: confirm paid -->
-            <div id="confirmStep">
-                <div class="action-row">
-                    <a href="@Url.Action("Details", "Place", new { id = Model.Id })" class="btn-back">
-                        <i class="fa-solid fa-arrow-left"></i> Quay lại
-                    </a>
-                    <button type="button" class="btn-paid" id="btnPaid" onclick="revealUpload()">
-                        <i class="fa-solid fa-circle-check"></i>
-                        Đã thanh toán – Úp Banner
+            <!-- ── Bước 1: Tải lên ảnh Banner quảng cáo (Chung) ── -->
+            <div class="dropzone-wrapper" style="margin-bottom: 1.5rem;">
+                <div class="dropzone-label">
+                    <i class="fa-solid fa-image"></i>
+                    Bước 1: Chọn ảnh Banner quảng cáo <span class="req">*</span>
+                </div>
+                <div class="dropzone" id="dz-banner"
+                     ondragover="onDragOver(event, this)"
+                     ondragleave="onDragLeave(event, this)"
+                     ondrop="onDrop(event, this, 'sharedBannerImage', 'preview-banner', 'banner')">
+                    <input type="file" id="sharedBannerImage" accept="image/*" required
+                           onchange="onFileSelect(event, 'dz-banner', 'preview-banner', 'banner')" />
+                    <div class="dropzone-icon" id="dz-banner-icon">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div class="dropzone-hint" id="dz-banner-hint">
+                        <strong>Kéo thả ảnh vào đây</strong> hoặc bấm để chọn<br>
+                        <span style="font-size:0.72rem;color:#374151;">Khuyến nghị: 1200×400 px, tỉ lệ 16:9</span>
+                    </div>
+                    <img class="dz-preview" id="preview-banner" src="" alt="" style="display:none;" />
+                    <button type="button" class="dz-remove" id="remove-banner" style="display:none;"
+                            onclick="clearFile('dz-banner', 'preview-banner', 'remove-banner', 'sharedBannerImage', 'dz-banner-icon', 'dz-banner-hint')">
+                        <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Step 2: upload form (hidden initially) -->
-            <div class="upload-section" id="uploadSection">
-                <div class="upload-header">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <span>Tốt! Tải lên ảnh banner <strong>và biên lai</strong> để Admin xác nhận.</span>
+            <!-- ── Bước 2: Chọn phương thức thanh toán ── -->
+            <div class="right-card-header" style="margin-top: 1rem;">
+                <div class="pay-title" style="font-size:1.1rem; margin-bottom:.3rem;">Bước 2: Chọn phương thức</div>
+                <div class="pay-subtitle" style="margin-bottom:1rem;">Chọn cách thanh toán phù hợp với bạn.</div>
+            </div>
+
+            <!-- ── Tabs chọn phương thức ── -->
+            <div class="method-tabs">
+                <button id="tabBank" class="method-tab active-bank" onclick="switchTab('bank')">
+                    <i class="fa-solid fa-building-columns"></i> Chuyển khoản
+                </button>
+                <button id="tabVnpay" class="method-tab" onclick="switchTab('vnpay')">
+                    <i class="fa-solid fa-bolt"></i> VNPay
+                </button>
+            </div>
+
+            <!-- ── Panel: Chuyển khoản thủ công ── -->
+            <div class="method-panel active" id="panelBank">
+
+                <!-- QR + Hướng dẫn chuyển khoản (Sẽ bị ẩn khi bấm Đã thanh toán) -->
+                <div id="bankInstructions">
+                    <div class="pay-title" style="font-size:1.1rem;margin-bottom:.4rem;">Thông tin chuyển khoản</div>
+                    <div class="pay-subtitle" style="margin-bottom:1.5rem;">Quét mã QR hoặc thực hiện chuyển khoản thủ công theo thông tin dưới đây.</div>
+
+                    <!-- QR -->
+                    <div class="qr-outer">
+                        <div class="qr-glow"></div>
+                        <div class="qr-frame">
+                            <div class="qr-skeleton" id="qrSkeleton"></div>
+                            <img id="qrImg"
+                                 src="@qrUrl"
+                                 alt="QR thanh toán Vietcombank"
+                                 style="display:none; width:200px; height:200px; border-radius:8px;"
+                                 onload="document.getElementById('qrSkeleton').style.display='none'; this.style.display='block';"
+                                 onerror="document.getElementById('qrSkeleton').innerHTML='<div style=\'color:#ef4444;font-size:.78rem;padding:1.2rem;text-align:center;\'>Không tải được QR.<br/>Vui lòng CK thủ công.</div>';" />
+                        </div>
+                    </div>
+
+                    <!-- Bank rows -->
+                    <div class="bank-table">
+                        <div class="bank-row">
+                            <span class="bank-label">Ngân hàng</span>
+                            <span class="bank-value">🏦 Vietcombank (VCB)</span>
+                        </div>
+                        <div class="bank-row">
+                            <span class="bank-label">Số tài khoản</span>
+                            <span style="display:flex;align-items:center;">
+                                <span class="bank-value green" id="accNo">@accountNo</span>
+                                <button class="copy-btn" onclick="copyText('@accountNo', this)" title="Sao chép">
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="bank-row">
+                            <span class="bank-label">Chủ tài khoản</span>
+                            <span class="bank-value">@accountName</span>
+                        </div>
+                        <div class="bank-row">
+                            <span class="bank-label">Số tiền</span>
+                            <span class="bank-value yellow">100,000 VNĐ</span>
+                        </div>
+                        <div class="bank-row">
+                            <span class="bank-label">Nội dung CK</span>
+                            <span style="display:flex;align-items:center;">
+                                <span class="bank-value" id="ckContent" style="font-family:'Courier New',monospace;font-size:.82rem;">Quang cao @Model.Id</span>
+                                <button class="copy-btn" onclick="copyText('Quang cao @Model.Id', this)" title="Sao chép">
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Steps -->
+                    <div class="steps-label">Hướng dẫn thanh toán</div>
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-text">Mở app ngân hàng → <strong style="color:#e2e8f0;">Quét mã QR</strong> hoặc chuyển khoản thủ công.</div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-text">Nhập đúng nội dung: <strong style="color:#fbbf24; font-family:'Courier New',monospace;">Quang cao @Model.Id</strong></div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-text">Bấm nút <strong style="color:#4ade80;">"Đã thanh toán"</strong> bên dưới để cập nhật ảnh banner và gửi biên lai.</div>
+                    </div>
+                </div>
+
+                <!-- Step 1: confirm paid -->
+                <div id="confirmStep">
+                    <div class="action-row" style="margin-top: 1.5rem;">
+                        <a href="@Url.Action("Details", "Place", new { id = Model.Id })" class="btn-back" style="flex:1; justify-content: center;">
+                            <i class="fa-solid fa-arrow-left"></i> Quay lại
+                        </a>
+                        <button type="button" class="btn-paid" id="btnPaid" onclick="revealUpload()" style="flex:1; justify-content: center;">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Đã thanh toán – Xác nhận biên lai
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: upload form (hidden initially) -->
+                <div class="upload-section" id="uploadSection">
+                    <div class="upload-header">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Tốt! Tải lên biên lai để hoàn tất yêu cầu quảng cáo.</span>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data"
+                          action="@Url.Action("UpdateBanner", "Place")"
+                          id="uploadForm" onsubmit="return handleSubmit(event, 'bank')">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        
+                        <!-- Hidden input to hold copy of bannerImage -->
+                        <input type="file" name="bannerImage" id="bankBannerImage" class="d-none" />
+
+                        <!-- Dropzone: Receipt -->
+                        <div class="dropzone-wrapper">
+                            <div class="dropzone-label">
+                                <i class="fa-solid fa-receipt"></i>
+                                Ảnh biên lai chuyển khoản <span class="req">*</span>
+                            </div>
+                            <div class="dropzone" id="dz-receipt"
+                                 ondragover="onDragOver(event, this)"
+                                 ondragleave="onDragLeave(event, this)"
+                                 ondrop="onDrop(event, this, 'paymentProof', 'preview-receipt', 'receipt')">
+                                <input type="file" name="paymentProof" id="paymentProof"
+                                       accept="image/*" required
+                                       onchange="onFileSelect(event, 'dz-receipt', 'preview-receipt', 'receipt')" />
+                                <div class="dropzone-icon" id="dz-receipt-icon">
+                                    <i class="fa-solid fa-camera"></i>
+                                </div>
+                                <div class="dropzone-hint" id="dz-receipt-hint">
+                                    <strong>Kéo thả ảnh vào đây</strong> hoặc bấm để chọn<br>
+                                    <span style="font-size:0.72rem;color:#374151;">Chụp màn hình xác nhận giao dịch</span>
+                                </div>
+                                <img class="dz-preview-receipt" id="preview-receipt" src="" alt="" style="display:none;" />
+                                <button type="button" class="dz-remove" id="remove-receipt" style="display:none;"
+                                        onclick="clearFile('dz-receipt', 'preview-receipt', 'remove-receipt', 'paymentProof', 'dz-receipt-icon', 'dz-receipt-hint')">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit" id="btnSubmit">
+                            <div class="spinner-sm"></div>
+                            <span class="btn-text">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                Gửi yêu cầu duyệt banner
+                            </span>
+                        </button>
+                    </form>
+
+                    <div class="pay-note">
+                        <strong>Lưu ý:</strong> Sau khi gửi, Admin sẽ kiểm tra biên lai và
+                        <strong>duyệt trong vòng 24 giờ</strong>.
+                        Banner sẽ xuất hiện trên trang chủ khi được xác nhận.
+                    </div>
+                </div>
+
+                <!-- Before clicking: show tip -->
+                <div id="preTip" style="margin-top: auto; padding-top: 1.5rem;">
+                    <div class="pay-note">
+                        <strong>Lưu ý:</strong> Sau khi chuyển khoản thành công, bấm nút
+                        <strong>"Đã thanh toán – Xác nhận biên lai"</strong> để tải lên biên lai của bạn.
+                    </div>
+                </div>
+            </div><!-- end panelBank -->
+
+            <!-- ── Panel: VNPay ── -->
+            <div class="method-panel" id="panelVnpay">
+                <div class="vnpay-badge">
+                    <i class="fa-solid fa-bolt"></i> Thanh toán tức thì
+                </div>
+                <div class="pay-title" style="font-size:1.1rem;margin-bottom:.4rem;">
+                    Thanh toán qua <em style="color:#38bdf8;">VNPay</em>
+                </div>
+                <div class="pay-subtitle">
+                    Hỗ trợ ATM nội địa, Visa/Master, QR Banking và ví điện tử.
+                    Sau khi thanh toán thành công, banner của bạn sẽ <strong style="color:#fbbf24;">chờ Admin phê duyệt</strong> trước khi hiển thị.
+                </div>
+
+                <!-- Tóm tắt đơn hàng -->
+                <div class="bank-table" style="margin-bottom:1.2rem;">
+                    <div class="bank-row">
+                        <span class="bank-label">Dịch vụ</span>
+                        <span class="bank-value">Banner quảng cáo – @Model.Name</span>
+                    </div>
+                    <div class="bank-row">
+                        <span class="bank-label">Số tiền</span>
+                        <span class="bank-value yellow">100,000 VNĐ</span>
+                    </div>
+                    <div class="bank-row">
+                        <span class="bank-label">Thời hạn</span>
+                        <span class="bank-value green">30 ngày</span>
+                    </div>
+                    <div class="bank-row">
+                        <span class="bank-label">Kích hoạt</span>
+                        <span class="bank-value" style="color:#fbbf24;">Chờ Admin phê duyệt</span>
+                    </div>
                 </div>
 
                 <form method="post" enctype="multipart/form-data"
-                      action="@Url.Action("UpdateBanner", "Place")"
-                      id="uploadForm" onsubmit="handleSubmit(event)">
+                      action="@Url.Action("VnpayCheckout", "Place")"
+                      id="vnpayForm" onsubmit="return handleSubmit(event, 'vnpay')">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />
+                    
+                    <!-- Hidden input to hold copy of bannerImage -->
+                    <input type="file" name="bannerImage" id="vnpayBannerImage" class="d-none" />
 
-                    <!-- Dropzone: Banner -->
-                    <div class="dropzone-wrapper">
-                        <div class="dropzone-label">
-                            <i class="fa-solid fa-image"></i>
-                            1. Ảnh Banner quảng cáo <span class="req">*</span>
-                        </div>
-                        <div class="dropzone" id="dz-banner"
-                             ondragover="onDragOver(event, this)"
-                             ondragleave="onDragLeave(event, this)"
-                             ondrop="onDrop(event, this, 'bannerImage', 'preview-banner', 'banner')">
-                            <input type="file" name="bannerImage" id="bannerImage"
-                                   accept="image/*" required
-                                   onchange="onFileSelect(event, 'dz-banner', 'preview-banner', 'banner')" />
-                            <div class="dropzone-icon" id="dz-banner-icon">
-                                <i class="fa-solid fa-cloud-arrow-up"></i>
-                            </div>
-                            <div class="dropzone-hint" id="dz-banner-hint">
-                                <strong>Kéo thả ảnh vào đây</strong> hoặc bấm để chọn<br>
-                                <span style="font-size:0.72rem;color:#374151;">Khuyến nghị: 1200×400 px, tỉ lệ 16:9</span>
-                            </div>
-                            <img class="dz-preview" id="preview-banner" src="" alt="" style="display:none;" />
-                            <button type="button" class="dz-remove" id="remove-banner" style="display:none;"
-                                    onclick="clearFile('dz-banner', 'preview-banner', 'remove-banner', 'bannerImage', 'dz-banner-icon', 'dz-banner-hint')">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Dropzone: Receipt -->
-                    <div class="dropzone-wrapper">
-                        <div class="dropzone-label">
-                            <i class="fa-solid fa-receipt"></i>
-                            2. Ảnh biên lai chuyển khoản <span class="req">*</span>
-                        </div>
-                        <div class="dropzone" id="dz-receipt"
-                             ondragover="onDragOver(event, this)"
-                             ondragleave="onDragLeave(event, this)"
-                             ondrop="onDrop(event, this, 'paymentProof', 'preview-receipt', 'receipt')">
-                            <input type="file" name="paymentProof" id="paymentProof"
-                                   accept="image/*" required
-                                   onchange="onFileSelect(event, 'dz-receipt', 'preview-receipt', 'receipt')" />
-                            <div class="dropzone-icon" id="dz-receipt-icon">
-                                <i class="fa-solid fa-camera"></i>
-                            </div>
-                            <div class="dropzone-hint" id="dz-receipt-hint">
-                                <strong>Kéo thả ảnh vào đây</strong> hoặc bấm để chọn<br>
-                                <span style="font-size:0.72rem;color:#374151;">Chụp màn hình xác nhận giao dịch</span>
-                            </div>
-                            <img class="dz-preview-receipt" id="preview-receipt" src="" alt="" style="display:none;" />
-                            <button type="button" class="dz-remove" id="remove-receipt" style="display:none;"
-                                    onclick="clearFile('dz-receipt', 'preview-receipt', 'remove-receipt', 'paymentProof', 'dz-receipt-icon', 'dz-receipt-hint')">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn-submit" id="btnSubmit">
-                        <div class="spinner-sm"></div>
-                        <span class="btn-text">
-                            <i class="fa-solid fa-paper-plane"></i>
-                            Gửi yêu cầu duyệt banner
-                        </span>
+                    <button type="submit" class="btn-vnpay" id="btnVnpay" style="width: 100%; border: none;">
+                        <i class="fa-solid fa-bolt"></i>
+                        Thanh toán ngay – 100,000 VNĐ
                     </button>
                 </form>
 
-                <div class="pay-note">
-                    <strong>Lưu ý:</strong> Sau khi gửi, Admin sẽ kiểm tra biên lai và
-                    <strong>duyệt trong vòng 24 giờ</strong>.
-                    Banner sẽ xuất hiện trên trang chủ khi được xác nhận.
+                <div class="vnpay-note">
+                    <strong>Bảo mật:</strong> Giao dịch được mã hóa và xác thực bởi
+                    <strong>VNPAY</strong>. Thông tin thẻ của bạn <strong>không được lưu trữ</strong> trên hệ thống.
                 </div>
-            </div>
 
-            <!-- Before clicking: show tip -->
-            <div id="preTip" style="margin-top: auto; padding-top: 1.5rem;">
-                <div class="pay-note">
-                    <strong>Lưu ý:</strong> Sau khi chuyển khoản thành công, bấm nút
-                    <strong>"Đã thanh toán"</strong> để tải lên ảnh banner và biên lai.
-                    Admin sẽ duyệt trong vòng <strong>24 giờ</strong>.
+                <div style="margin-top:.8rem;">
+                    <a href="@Url.Action("Details", "Place", new { id = Model.Id })" class="btn-back" style="width:100%;justify-content:center;">
+                        <i class="fa-solid fa-arrow-left"></i> Quay lại
+                    </a>
                 </div>
-            </div>
+            </div><!-- end panelVnpay -->
+
         </div>
 
     </div>
@@ -747,14 +1000,24 @@
 
 @section Scripts {
 <script>
+    /* ── Switch payment method tabs ── */
+    function switchTab(tab) {
+        const isBank = tab === 'bank';
+        document.getElementById('panelBank').classList.toggle('active', isBank);
+        document.getElementById('panelVnpay').classList.toggle('active', !isBank);
+        document.getElementById('tabBank').className  = 'method-tab' + (isBank ? ' active-bank' : '');
+        document.getElementById('tabVnpay').className = 'method-tab' + (!isBank ? ' active-vnpay' : '');
+    }
+
     /* ── Reveal upload form ─────────────────────────────── */
     function revealUpload() {
         document.getElementById('confirmStep').style.display = 'none';
         document.getElementById('preTip').style.display = 'none';
+        document.getElementById('bankInstructions').style.display = 'none';
         const sec = document.getElementById('uploadSection');
         sec.classList.add('visible');
         setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
-        showToast('info', 'Hãy tải lên ảnh banner và biên lai để hoàn tất.', 4000);
+        showToast('info', 'Hãy tải lên ảnh biên lai để hoàn tất.', 4000);
     }
 
     /* ── Drag & drop handlers ───────────────────────────── */
@@ -767,15 +1030,20 @@
         el.classList.remove('drag-over');
     }
 
-    function onDrop(e, el, inputName, previewId, type) {
+    function onDrop(e, el, inputId, previewId, type) {
         e.preventDefault();
         el.classList.remove('drag-over');
         const file = e.dataTransfer.files[0];
         if (!file || !file.type.startsWith('image/')) return;
-        const input = el.querySelector('input[type="file"]');
+        const input = document.getElementById(inputId);
         const dt = new DataTransfer();
         dt.items.add(file);
         input.files = dt.files;
+        
+        if (inputId === 'sharedBannerImage') {
+            syncBannerFiles(file);
+        }
+        
         showPreview(file, el.id, previewId, el.id.replace('dz-', 'remove-'), type);
     }
 
@@ -783,7 +1051,27 @@
     function onFileSelect(e, dzId, previewId, type) {
         const file = e.target.files[0];
         if (!file) return;
+        
+        if (e.target.id === 'sharedBannerImage') {
+            syncBannerFiles(file);
+        }
+        
         showPreview(file, dzId, previewId, dzId.replace('dz-', 'remove-'), type);
+    }
+
+    function syncBannerFiles(file) {
+        const bankInput = document.getElementById('bankBannerImage');
+        if (bankInput) {
+            const dt1 = new DataTransfer();
+            dt1.items.add(file);
+            bankInput.files = dt1.files;
+        }
+        const vnpayInput = document.getElementById('vnpayBannerImage');
+        if (vnpayInput) {
+            const dt2 = new DataTransfer();
+            dt2.items.add(file);
+            vnpayInput.files = dt2.files;
+        }
     }
 
     function showPreview(file, dzId, previewId, removeBtnId, type) {
@@ -812,20 +1100,47 @@
         document.getElementById(hintId).style.display = '';
         document.getElementById(removeBtnId).style.display = 'none';
         document.getElementById(dzId).classList.remove('has-file');
+        
+        if (inputId === 'sharedBannerImage') {
+            const bankInput = document.getElementById('bankBannerImage');
+            if (bankInput) bankInput.value = '';
+            const vnpayInput = document.getElementById('vnpayBannerImage');
+            if (vnpayInput) vnpayInput.value = '';
+        }
     }
 
-    /* ── Submit with loading state ──────────────────────── */
-    function handleSubmit(e) {
-        const btn = document.getElementById('btnSubmit');
+    /* ── Submit with validation & loading state ─────────── */
+    function handleSubmit(e, formType) {
+        const sharedInput = document.getElementById('sharedBannerImage');
+        if (!sharedInput || !sharedInput.files || sharedInput.files.length === 0) {
+            e.preventDefault();
+            showToast('error', 'Vui lòng chọn ảnh Banner quảng cáo ở Bước 1 trước.');
+            document.getElementById('dz-banner').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+
+        const btnId = formType === 'vnpay' ? 'btnVnpay' : 'btnSubmit';
+        const btn = document.getElementById(btnId);
+        
         btn.classList.add('loading');
         btn.disabled = true;
-        showToast('info', 'Đang gửi yêu cầu, vui lòng chờ…');
-        // Allow form to submit naturally; re-enable if validation fails
+        
+        if (formType === 'vnpay') {
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang kết nối VNPay...';
+            showToast('info', 'Đang chuyển hướng đến VNPay, vui lòng chờ…');
+        } else {
+            showToast('info', 'Đang gửi yêu cầu, vui lòng chờ…');
+        }
+        
         setTimeout(() => {
-            // safety re-enable after 15s
             btn.classList.remove('loading');
             btn.disabled = false;
+            if (formType === 'vnpay') {
+                btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Thanh toán ngay – 100,000 VNĐ';
+            }
         }, 15000);
+        
+        return true;
     }
 
     /* ── Copy to clipboard ──────────────────────────────── */

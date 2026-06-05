@@ -22,6 +22,46 @@ namespace DACS.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DACS.Models.ChatMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PlaceId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReceiverId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SenderId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiverId");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("PlaceId", "SenderId", "ReceiverId");
+
+                    b.ToTable("ChatMessages");
+                });
+
             modelBuilder.Entity("DACS.Models.CommentHelpfulVote", b =>
                 {
                     b.Property<int>("CommentId")
@@ -37,7 +77,7 @@ namespace DACS.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CommentHelpfulVotes", (string)null);
+                    b.ToTable("CommentHelpfulVotes");
                 });
 
             modelBuilder.Entity("DACS.Models.Place", b =>
@@ -109,7 +149,7 @@ namespace DACS.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("Places", (string)null);
+                    b.ToTable("Places");
                 });
 
             modelBuilder.Entity("DACS.Models.PlaceCategory", b =>
@@ -134,7 +174,7 @@ namespace DACS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PlaceCategories", (string)null);
+                    b.ToTable("PlaceCategories");
                 });
 
             modelBuilder.Entity("DACS.Models.PlaceComment", b =>
@@ -171,7 +211,7 @@ namespace DACS.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PlaceComments", (string)null);
+                    b.ToTable("PlaceComments");
                 });
 
             modelBuilder.Entity("DACS.Models.PlaceImage", b =>
@@ -193,7 +233,7 @@ namespace DACS.Migrations
 
                     b.HasIndex("PlaceId");
 
-                    b.ToTable("PlaceImages", (string)null);
+                    b.ToTable("PlaceImages");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -390,6 +430,33 @@ namespace DACS.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("DACS.Models.ChatMessage", b =>
+                {
+                    b.HasOne("DACS.Models.Place", "Place")
+                        .WithMany()
+                        .HasForeignKey("PlaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "Receiver")
+                        .WithMany()
+                        .HasForeignKey("ReceiverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Place");
+
+                    b.Navigation("Receiver");
+
+                    b.Navigation("Sender");
                 });
 
             modelBuilder.Entity("DACS.Models.CommentHelpfulVote", b =>
