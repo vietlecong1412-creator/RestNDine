@@ -131,11 +131,8 @@
                 @if (User.IsInRole("Owner") || User.IsInRole("Admin"))
                 {
                     <div class="d-flex gap-2 mb-3">
-                        <a asp-controller="Place" asp-action="Create" asp-route-categoryId="1" class="btn-primary-custom w-50 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px;">
-                            🍴 Thêm nhà hàng
-                        </a>
-                        <a asp-controller="Place" asp-action="Create" asp-route-categoryId="2" class="btn-primary-custom w-50 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border: none;">
-                            🏨 Thêm khách sạn
+                        <a asp-controller="Place" asp-action="Create" class="btn-primary-custom w-100 justify-content-center text-center" style="font-size: .8rem; padding: .5rem; border-radius: 50px;">
+                            ➕ Thêm địa điểm
                         </a>
                     </div>
                 }
