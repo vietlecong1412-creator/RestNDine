@@ -58,6 +58,7 @@ namespace DACS.Areas.Admin.Controllers
                     Email = user.Email,
                     Role = role,
                     IsLockedOut = isLocked,
+                    EmailConfirmed = user.EmailConfirmed,
                     LockoutEnd = user.LockoutEnd
                 });
             }
