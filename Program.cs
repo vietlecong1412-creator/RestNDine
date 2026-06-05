@@ -3,7 +3,6 @@ using DACS.Repositories;
 using DACS.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Resend;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,11 +24,6 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     .AddDefaultUI()
     .AddDefaultTokenProviders();
 
-var resendApiKey = builder.Configuration["ResendApiKey"];
-if (!string.IsNullOrEmpty(resendApiKey))
-{
-    builder.Services.AddResend(options => { options.ApiToken = resendApiKey; });
-}
 builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, EmailSender>();
 
 builder.Services.AddRazorPages();

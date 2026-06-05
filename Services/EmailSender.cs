@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Resend;
 using System;
 using System.IO;
 using System.Net;
@@ -16,14 +15,12 @@ namespace DACS.Services
         private readonly ILogger<EmailSender> _logger;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
-        private readonly IResend? _resend;
 
-        public EmailSender(ILogger<EmailSender> logger, IConfiguration configuration, IWebHostEnvironment env, IResend? resend = null)
+        public EmailSender(ILogger<EmailSender> logger, IConfiguration configuration, IWebHostEnvironment env)
         {
             _logger = logger;
             _configuration = configuration;
             _env = env;
-            _resend = resend;
         }
 
         public Task SendEmailAsync(string email, string subject, string htmlMessage)
@@ -32,20 +29,11 @@ namespace DACS.Services
             {
                 try
                 {
-                    var resendApiKey = _configuration["ResendApiKey"];
-
-                    if (!string.IsNullOrEmpty(resendApiKey) && _resend != null)
-                    {
-                        await SendViaResendAsync(email, subject, htmlMessage);
-                    }
-                    else
-                    {
-                        await SendViaSmtpAsync(email, subject, htmlMessage);
-                    }
+                    await SendViaSmtpAsync(email, subject, htmlMessage);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Lỗi nghiêm trọng trong EmailSender khi gửi tới {Email}: {Message}", email, ex.Message);
+                    _logger.LogError(ex, "Lỗi nghiêm trọng trong EmailSender khi gửi tới {Email}", email);
                     await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
                 }
             });
@@ -53,48 +41,20 @@ namespace DACS.Services
             return Task.CompletedTask;
         }
 
-        private async Task SendViaResendAsync(string email, string subject, string htmlMessage)
-        {
-            try
-            {
-                var fromAddress = _configuration["ResendFromAddress"] ?? "onboarding@resend.dev";
-
-                var message = new EmailMessage();
-                message.From = fromAddress;
-                message.To.Add(email);
-                message.Subject = subject;
-                message.HtmlBody = htmlMessage;
-
-                await _resend!.EmailSendAsync(message);
-                _logger.LogInformation("Gửi email thành công tới {Email} qua Resend.", email);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Gửi email tới {Email} qua Resend thất bại: {Message}", email, ex.Message);
-                await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
-            }
-        }
-
         private async Task SendViaSmtpAsync(string email, string subject, string htmlMessage)
         {
             var smtpSettings = _configuration.GetSection("SmtpSettings");
             var host = smtpSettings["Host"];
+            var port = int.Parse(smtpSettings["Port"] ?? "587");
+            var username = smtpSettings["Username"];
+            var password = smtpSettings["Password"];
+            var from = smtpSettings["FromAddress"] ?? username;
+            var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
 
-            if (string.IsNullOrEmpty(host))
-            {
-                _logger.LogWarning("SMTP Host chưa được cấu hình. Lưu email thành file HTML.");
-                await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
-                return;
-            }
+            _logger.LogInformation("Đang gửi email tới {Email} qua SMTP {Host}:{Port}", email, host, port);
 
             try
             {
-                var port = int.Parse(smtpSettings["Port"] ?? "587");
-                var username = smtpSettings["Username"];
-                var password = smtpSettings["Password"];
-                var from = smtpSettings["FromAddress"] ?? "no-reply@restndine.com";
-                var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
-
                 using var client = new SmtpClient(host, port);
                 client.UseDefaultCredentials = false;
                 client.Credentials = new NetworkCredential(username, password);
@@ -102,7 +62,7 @@ namespace DACS.Services
 
                 var mailMessage = new MailMessage
                 {
-                    From = new MailAddress(from, "RestNDine Security"),
+                    From = new MailAddress(from, "RestNDine"),
                     Subject = subject,
                     Body = htmlMessage,
                     IsBodyHtml = true,
@@ -110,11 +70,11 @@ namespace DACS.Services
                 mailMessage.To.Add(email);
 
                 await client.SendMailAsync(mailMessage).WaitAsync(TimeSpan.FromSeconds(15));
-                _logger.LogInformation("Gửi email thành công tới {Email} qua SMTP.", email);
+                _logger.LogInformation("Gửi email thành công tới {Email}", email);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Gửi email tới {Email} qua SMTP thất bại: {Message}", email, ex.Message);
+                _logger.LogError(ex, "SMTP thất bại khi gửi tới {Email}: {Message}", email, ex.Message);
                 await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
             }
         }
@@ -124,56 +84,29 @@ namespace DACS.Services
             try
             {
                 var emailDir = Path.Combine(_env.WebRootPath, "sent_emails");
-                if (!Directory.Exists(emailDir))
-                {
-                    Directory.CreateDirectory(emailDir);
-                }
+                Directory.CreateDirectory(emailDir);
 
                 var fileName = $"email-{Guid.NewGuid()}.html";
                 var filePath = Path.Combine(emailDir, fileName);
 
                 var content = $@"<!DOCTYPE html>
 <html lang=""vi"">
-<head>
-    <meta charset=""utf-8"" />
-    <title>{subject}</title>
-    <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f8f9fa; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }}
-        .header {{ border-bottom: 2px solid #ff4757; padding-bottom: 15px; margin-bottom: 20px; }}
-        .header h2 {{ margin: 0; color: #ff4757; }}
-        .info {{ background: #f1f2f6; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }}
-        .info p {{ margin: 5px 0; }}
-        .content {{ line-height: 1.6; font-size: 16px; }}
-        .footer {{ margin-top: 30px; border-top: 1px solid #e4e7eb; padding-top: 15px; font-size: 12px; color: #7f8c8d; text-align: center; }}
-    </style>
-</head>
+<head><meta charset=""utf-8""/><title>{subject}</title></head>
 <body>
-    <div class=""container"">
-        <div class=""header"">
-            <h2>RestNDine Security Service</h2>
-        </div>
-        <div class=""info"">
-            <p><strong>Người nhận (To):</strong> {email}</p>
-            <p><strong>Tiêu đề (Subject):</strong> {subject}</p>
-            <p><strong>Thời gian (Sent At):</strong> {DateTime.Now:dd/MM/yyyy HH:mm:ss}</p>
-        </div>
-        <div class=""content"">
-            {htmlMessage}
-        </div>
-        <div class=""footer"">
-            Email này được lưu cục bộ vì không thể gửi qua Resend/SMTP.
-        </div>
-    </div>
+<p><strong>To:</strong> {email}</p>
+<p><strong>Subject:</strong> {subject}</p>
+<p><strong>Sent At:</strong> {DateTime.Now:dd/MM/yyyy HH:mm:ss}</p>
+<hr/>
+{htmlMessage}
 </body>
 </html>";
 
                 await File.WriteAllTextAsync(filePath, content);
-                _logger.LogWarning("[EMAIL FALLBACK] Email tới {Email} lưu tại: /sent_emails/{FileName}", email, fileName);
+                _logger.LogWarning("[EMAIL FALLBACK] Lưu email tới {Email} tại /sent_emails/{FileName}", email, fileName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Không thể lưu email fallback ra file: {Message}", ex.Message);
+                _logger.LogError(ex, "Không thể lưu email fallback: {Message}", ex.Message);
             }
         }
     }
