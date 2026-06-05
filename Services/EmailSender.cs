@@ -4,8 +4,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace DACS.Services
@@ -15,6 +17,7 @@ namespace DACS.Services
         private readonly ILogger<EmailSender> _logger;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
+        private static readonly HttpClient _httpClient = new HttpClient();
 
         public EmailSender(ILogger<EmailSender> logger, IConfiguration configuration, IWebHostEnvironment env)
         {
@@ -29,7 +32,16 @@ namespace DACS.Services
             {
                 try
                 {
-                    await SendViaSmtpAsync(email, subject, htmlMessage);
+                    var apiKey = _configuration["BrevoApiKey"];
+                    if (!string.IsNullOrEmpty(apiKey))
+                    {
+                        await SendViaBrevoApiAsync(email, subject, htmlMessage, apiKey);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("BrevoApiKey chưa được cấu hình. Lưu email ra file HTML.");
+                        await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -41,40 +53,36 @@ namespace DACS.Services
             return Task.CompletedTask;
         }
 
-        private async Task SendViaSmtpAsync(string email, string subject, string htmlMessage)
+        private async Task SendViaBrevoApiAsync(string email, string subject, string htmlMessage, string apiKey)
         {
-            var smtpSettings = _configuration.GetSection("SmtpSettings");
-            var host = smtpSettings["Host"];
-            var port = int.Parse(smtpSettings["Port"] ?? "587");
-            var username = smtpSettings["Username"];
-            var password = smtpSettings["Password"];
-            var from = smtpSettings["FromAddress"] ?? username;
-            var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
+            var senderEmail = _configuration["BrevoSenderEmail"] ?? "vietlecong2108@gmail.com";
+            var senderName = _configuration["BrevoSenderName"] ?? "RestNDine";
 
-            _logger.LogInformation("Đang gửi email tới {Email} qua SMTP {Host}:{Port}", email, host, port);
-
-            try
+            var payload = new
             {
-                using var client = new SmtpClient(host, port);
-                client.UseDefaultCredentials = false;
-                client.Credentials = new NetworkCredential(username, password);
-                client.EnableSsl = enableSsl;
+                sender = new { email = senderEmail, name = senderName },
+                to = new[] { new { email = email } },
+                subject = subject,
+                htmlContent = htmlMessage
+            };
 
-                var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(from, "RestNDine"),
-                    Subject = subject,
-                    Body = htmlMessage,
-                    IsBodyHtml = true,
-                };
-                mailMessage.To.Add(email);
+            var json = JsonSerializer.Serialize(payload);
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
+            request.Headers.Add("api-key", apiKey);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                await client.SendMailAsync(mailMessage).WaitAsync(TimeSpan.FromSeconds(15));
-                _logger.LogInformation("Gửi email thành công tới {Email}", email);
+            _logger.LogInformation("Đang gửi email tới {Email} qua Brevo API", email);
+
+            var response = await _httpClient.SendAsync(request).WaitAsync(TimeSpan.FromSeconds(15));
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Gửi email thành công tới {Email} qua Brevo API", email);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(ex, "SMTP thất bại khi gửi tới {Email}: {Message}", email, ex.Message);
+                _logger.LogError("Brevo API lỗi {StatusCode}: {Body}", (int)response.StatusCode, responseBody);
                 await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
             }
         }
