@@ -29,24 +29,21 @@ namespace DACS.Areas.Identity.Pages.Account
         private readonly IUserStore<IdentityUser> _userStore;
         private readonly IUserEmailStore<IdentityUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
-        private readonly IEmailSender _emailSender;
-        private readonly IMemoryCache _memoryCache;
+        private readonly DACS.Services.OtpService _otpService;
 
         public RegisterModel(
             UserManager<IdentityUser> userManager,
             IUserStore<IdentityUser> userStore,
             SignInManager<IdentityUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender,
-            IMemoryCache memoryCache)
+            DACS.Services.OtpService otpService)
         {
             _userManager = userManager;
             _userStore = userStore;
             _emailStore = GetEmailStore();
             _signInManager = signInManager;
             _logger = logger;
-            _emailSender = emailSender;
-            _memoryCache = memoryCache;
+            _otpService = otpService;
         }
 
         /// <summary>
@@ -141,26 +138,11 @@ namespace DACS.Areas.Identity.Pages.Account
                         }
 
                         var userId = await _userManager.GetUserIdAsync(user);
-                        var cryptoToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-                        // 1. Tạo mã OTP 6 chữ số ngẫu nhiên
-                        var otpCode = new Random().Next(100000, 999999).ToString();
+                        // Tạo và gửi OTP xác thực email
+                        await _otpService.SendAsync(user);
 
-                        // 2. Lưu OTP và Security Token vào MemoryCache với hạn sử dụng 10 phút
-                        var cacheKey = $"OTP_EmailConf_{userId}";
-                        _memoryCache.Set(cacheKey, otpCode, TimeSpan.FromMinutes(10));
-                        _memoryCache.Set($"CryptoToken_EmailConf_{userId}", cryptoToken, TimeSpan.FromMinutes(10));
-
-                        // 3. Sử dụng mẫu email HTML OTP cao cấp được thiết kế riêng cho RestNDine
-                        _logger.LogWarning(">>> [DEV] OTP cho {Email}: {Otp} <<<", Input.Email, otpCode);
-                        var emailBody = DACS.Services.EmailTemplateHelper.GetOtpEmailHtml(otpCode, Input.Email);
-
-                        await _emailSender.SendEmailAsync(
-                            Input.Email, 
-                            "📡 Mã xác thực OTP tài khoản RestNDine của bạn",
-                            emailBody);
-
-                        // 4. Chuyển hướng sang trang nhập mã OTP
+                        // Chuyển hướng sang trang nhập mã OTP
                         if (_userManager.Options.SignIn.RequireConfirmedAccount)
                         {
                             return RedirectToPage("VerifyOtp", new { userId = userId, email = Input.Email });

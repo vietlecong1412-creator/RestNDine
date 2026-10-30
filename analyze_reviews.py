@@ -3,6 +3,7 @@ import sys
 import re
 import joblib
 from transformers import pipeline
+from text_preprocess import normalize
 
 try:
     sys.stdin.reconfigure(encoding='utf-8')
@@ -85,7 +86,8 @@ class ABSAAnalyzer:
         try:
             if not text or not text.strip():
                 return "neutral"
-            res = self.nlp_sentiment(text)[0]
+            text = normalize(text)
+            res = self.nlp_sentiment(text, truncation=True, max_length=256)[0]
             label = res["label"].upper()
             
             if "POS" in label:

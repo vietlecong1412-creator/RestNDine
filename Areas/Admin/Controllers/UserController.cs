@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using DACS.Areas.Admin.Models;
 using DACS.Data;
+using DACS.Repositories;
 
 namespace DACS.Areas.Admin.Controllers
 {
@@ -17,15 +18,18 @@ namespace DACS.Areas.Admin.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _context;
+        private readonly IPlaceRepository _placeRepository;
 
         public UserController(
             UserManager<IdentityUser> userManager, 
             RoleManager<IdentityRole> roleManager,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IPlaceRepository placeRepository)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _context = context;
+            _placeRepository = placeRepository;
         }
 
         public async Task<IActionResult> Index(string searchTerm = null, string roleFilter = null)
@@ -149,6 +153,7 @@ namespace DACS.Areas.Admin.Controllers
 
                 // Áp dụng các thay đổi xóa địa điểm sở hữu trước
                 await _context.SaveChangesAsync();
+                _placeRepository.InvalidatePlaceCaches();
 
                 // 3. Tiến hành xóa tài khoản người dùng
                 // (Toàn bộ bình luận do người dùng này viết tại các địa điểm khác cũng tự động được DB xóa Cascade nhờ ràng buộc khóa ngoại UserId)

@@ -79,7 +79,7 @@
                                         }
                                         else
                                         {
-                                            <div style="width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;">@(p.Category?.Icon ?? "📍")</div>
+                                            <div style="width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;">@(p.Categories.FirstOrDefault()?.Icon ?? "📍")</div>
                                         }
                                         <div>
                                             <div style="font-weight:600;color:var(--text-primary);">@p.Name</div>
@@ -89,7 +89,7 @@
                                 </td>
                                 <td>
                                     <span class="badge" style="background:rgba(255,255,255,.08);color:var(--text-secondary);border:1px solid var(--border);">
-                                        @(p.Category?.Icon) @(p.Category?.Name ?? "—")
+                                        @string.Join(" · ", p.Categories.Select(c => c.Icon + " " + c.Name))
                                     </span>
                                 </td>
                                 <td>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DACS.Data;
+using DACS.Helpers;
 using DACS.Models;
 using DACS.Hubs;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +19,8 @@ namespace DACS.Controllers
     [ApiController]
     public class ChatController : ControllerBase
     {
+        private const int MaxMessageLength = 2000;
+
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IHubContext<ChatHub> _hubContext;
@@ -48,10 +51,14 @@ namespace DACS.Controllers
                 return BadRequest("Địa điểm này chưa có chủ quán đăng ký quản lý.");
             }
 
-            bool isOwner = currentUserId == ownerId || User.IsInRole("Admin");
+            if (!PlaceAccess.CanView(place, User))
+            {
+                return NotFound(new { success = false, message = "Địa điểm không tồn tại." });
+            }
+
             string targetCustomerId;
 
-            if (isOwner)
+            if (currentUserId == ownerId)
             {
                 if (string.IsNullOrEmpty(customerId))
                 {
@@ -59,8 +66,14 @@ namespace DACS.Controllers
                 }
                 targetCustomerId = customerId;
             }
+            else if (User.IsInRole("Admin") && !string.IsNullOrEmpty(customerId) && customerId != ownerId)
+            {
+                // Admin xem hội thoại của một khách với quán
+                targetCustomerId = customerId;
+            }
             else
             {
+                // Khách, hoặc Admin nhắn với quán bằng tài khoản của mình
                 targetCustomerId = currentUserId;
             }
 
@@ -93,17 +106,45 @@ namespace DACS.Controllers
             var senderId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(senderId)) return Unauthorized();
 
+            // Lỗi trả về JSON vì client web và mobile đều đọc data.message
             if (string.IsNullOrWhiteSpace(content))
             {
-                return BadRequest("Nội dung tin nhắn không được để trống.");
+                return BadRequest(new { success = false, message = "Nội dung tin nhắn không được để trống." });
+            }
+
+            if (content.Trim().Length > MaxMessageLength)
+            {
+                return BadRequest(new { success = false, message = $"Tin nhắn không được vượt quá {MaxMessageLength} ký tự." });
             }
 
             var place = await _context.Places.FindAsync(placeId);
-            if (place == null) return NotFound("Địa điểm không tồn tại.");
+            if (place == null || !PlaceAccess.CanView(place, User))
+            {
+                return NotFound(new { success = false, message = "Địa điểm không tồn tại." });
+            }
 
-            // Kiểm tra tính hợp lệ của người nhận
-            var receiver = await _userManager.FindByIdAsync(receiverId);
-            if (receiver == null) return NotFound("Người nhận không tồn tại.");
+            var ownerId = place.OwnerId;
+            if (string.IsNullOrEmpty(ownerId))
+            {
+                return BadRequest(new { success = false, message = "Địa điểm này chưa có chủ quán đăng ký quản lý." });
+            }
+
+            if (senderId == ownerId)
+            {
+                // Chủ quán chỉ trả lời khách đã nhắn trước cho quán này
+                bool hasConversation = await _context.ChatMessages
+                    .AnyAsync(m => m.PlaceId == placeId && m.SenderId == receiverId && m.ReceiverId == ownerId);
+                if (!hasConversation)
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden,
+                        new { success = false, message = "Chủ quán chỉ có thể trả lời khách đã nhắn tin cho quán." });
+                }
+            }
+            else if (receiverId != ownerId)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { success = false, message = "Chỉ có thể nhắn tin cho chủ quán của địa điểm này." });
+            }
 
             var message = new ChatMessage
             {
@@ -157,7 +198,8 @@ namespace DACS.Controllers
             // Chỉ chủ quán hoặc Admin mới xem được danh sách hội thoại của quán
             if (currentUserId != ownerId && !User.IsInRole("Admin"))
             {
-                return Forbid("Bạn không có quyền truy cập danh sách hội thoại của quán này.");
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { success = false, message = "Bạn không có quyền truy cập danh sách hội thoại của quán này." });
             }
 
             // Truy vấn tin nhắn trong DB
@@ -206,7 +248,8 @@ namespace DACS.Controllers
             string ownerId = place.OwnerId ?? string.Empty;
             if (string.IsNullOrEmpty(ownerId)) return BadRequest("Địa điểm chưa có chủ quán.");
 
-            bool isOwner = currentUserId == ownerId || User.IsInRole("Admin");
+            // Admin không đánh dấu thay chủ quán, để chủ quán vẫn thấy tin chưa đọc
+            bool isOwner = currentUserId == ownerId;
 
             // Cập nhật trạng thái các tin nhắn gửi đến người dùng hiện tại là Đã đọc (IsRead = true)
             IQueryable<ChatMessage> query;

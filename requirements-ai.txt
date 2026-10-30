@@ -1,0 +1,12 @@
+# Thư viện cho analyze_reviews.py, giữ đúng phiên bản đã huấn luyện và chạy thử.
+# scikit-learn/numpy phải khớp với lúc tạo Models/*.pkl (đổi phiên bản thì cần chạy lại train_model.py).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.9.1+cpu
+transformers==4.36.2
+tokenizers==0.15.2
+huggingface-hub==0.36.0
+safetensors==0.7.0
+scikit-learn==1.7.2
+scipy==1.15.3
+numpy==2.2.6
+joblib==1.5.3

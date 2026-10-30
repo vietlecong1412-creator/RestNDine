@@ -479,6 +479,45 @@ body {
   color: var(--text-primary);
 }
 
+/* ── Category Checkbox Group ─────────────────────────────────── */
+.category-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .4rem;
+}
+
+.category-checkbox-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  cursor: pointer;
+  padding: .45rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(255,255,255,.04);
+  color: var(--text-secondary);
+  font-size: .85rem;
+  transition: all .2s ease;
+  user-select: none;
+}
+
+.category-checkbox-item input[type="checkbox"] {
+  display: none;
+}
+
+.category-checkbox-item:has(input:checked) {
+  border-color: var(--primary);
+  background: rgba(249,115,22,.12);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.category-checkbox-item:hover {
+  border-color: var(--primary);
+  color: var(--text-primary);
+}
+
 .form-control-custom::placeholder {
   color: var(--text-muted);
 }
@@ -2664,7 +2703,7 @@ footer.site-footer {
 .details-title {
   font-size: 2.25rem;
   font-weight: 800;
-  color: white;
+  color: #1f2937;
   margin: 0;
 }
 
@@ -2693,7 +2732,7 @@ footer.site-footer {
 .section-subtitle {
   font-size: 1.25rem;
   font-weight: 700;
-  color: white;
+  color: #1f2937;
   margin-bottom: 1rem;
 }
 

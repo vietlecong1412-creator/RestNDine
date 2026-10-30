@@ -23,9 +23,18 @@ namespace DACS.Data
         // ── Chat thời gian thực ──
         public DbSet<ChatMessage> ChatMessages { get; set; }
 
+        // ── Giao dịch VNPay mua banner ──
+        public DbSet<BannerPayment> BannerPayments { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Một Place có thể thuộc nhiều Category và ngược lại
+            builder.Entity<Place>()
+                .HasMany(p => p.Categories)
+                .WithMany(c => c.Places)
+                .UsingEntity(j => j.ToTable("PlaceCategoryAssignments"));
 
             // Composite PK: (CommentId, UserId) → mỗi user chỉ vote 1 lần / bình luận
             builder.Entity<CommentHelpfulVote>()
@@ -57,6 +66,17 @@ namespace DACS.Data
             // Index for faster history query
             builder.Entity<ChatMessage>()
                 .HasIndex(m => new { m.PlaceId, m.SenderId, m.ReceiverId });
+
+            builder.Entity<BannerPayment>()
+                .HasIndex(p => p.TxnRef)
+                .IsUnique();
+
+            // Xóa user vẫn giữ lịch sử giao dịch
+            builder.Entity<BannerPayment>()
+                .HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }
