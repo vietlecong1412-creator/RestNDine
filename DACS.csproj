@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- App Flutter nằm cùng repo, không thuộc project ASP.NET -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);restndine_app/**</DefaultItemExcludes>
     <UserSecretsId>193f7a7e-e1b3-42bb-b342-906a7712e095</UserSecretsId>
   </PropertyGroup>
 
