@@ -33,20 +33,24 @@ namespace DACS.Models
 
         public bool IsApproved { get; set; } = false;
 
-        // ── Category (bắt buộc) ──
-        public int CategoryId { get; set; }
-
-        [ForeignKey("CategoryId")]
-        public virtual PlaceCategory? Category { get; set; }
+        // ── Categories (many-to-many) ──
+        public virtual ICollection<PlaceCategory> Categories { get; set; } = new List<PlaceCategory>();
 
         // ── Fields chỉ dành cho Khách sạn (nullable) ──
 
-        /// <summary>Số sao khách sạn (1-5). Chỉ dùng khi CategoryId = Hotel.</summary>
         [Range(1, 5)]
         public int? StarRating { get; set; }
 
-        /// <summary>Tiện ích khách sạn, VD: "Free Wifi, Hồ bơi, Buffet". Chỉ dùng khi CategoryId = Hotel.</summary>
         public string? Amenities { get; set; }
+
+        // ── Thông tin bổ sung ──
+        // VD: "T2-T6: 10:00–22:00 | T7-CN: 09:00–23:00"
+        public string? OpeningHours { get; set; }
+
+        public string? Website { get; set; }
+
+        // JSON array string: ["Có WiFi","Bãi đỗ xe","Phù hợp gia đình"]
+        public string? Tags { get; set; }
 
         // ── AI Summary Cache ──
         /// <summary>HTML tóm tắt AI đã biên dịch, được lưu cache để tăng tốc độ tải trang.</summary>

@@ -174,13 +174,13 @@
                         {
                             <tr data-name="@p.Name.ToLower()"
                                 data-address="@(p.Address?.ToLower() ?? "")"
-                                data-category="@(p.Category?.Name?.ToLower() ?? "")"
+                                data-category="@(string.Join(" ", p.Categories.Select(c => c.Name)).ToLower())"
                                 data-approved="@(p.IsApproved ? "approved" : "pending")">
                                 <td style="color:var(--text-muted)">#@p.Id</td>
                                 <td class="name-cell"><strong style="color:var(--text-primary)">@p.Name</strong></td>
                                 <td>
                                     <span class="badge" style="background:rgba(255,255,255,.08);color:var(--text-secondary);border:1px solid var(--border);">
-                                        @(p.Category?.Icon) @(p.Category?.Name ?? "—")
+                                        @string.Join(" · ", p.Categories.Select(c => c.Icon + " " + c.Name))
                                     </span>
                                 </td>
                                 <td class="address-cell">@(string.IsNullOrEmpty(p.Address) ? "—" : p.Address)</td>

@@ -69,9 +69,6 @@ namespace DACS.Services
             var signData   = queryBuilder.ToString();
             var secureHash = HmacSha512(hashSecret, signData);
 
-            System.Console.WriteLine($"[VNPAY SIGN DATA] {signData}");
-            System.Console.WriteLine($"[VNPAY SECURE HASH] {secureHash}");
-
             return $"{baseUrl}?{queryBuilder}&vnp_SecureHash={secureHash}";
         }
 

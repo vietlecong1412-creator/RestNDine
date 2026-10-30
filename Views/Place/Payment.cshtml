@@ -746,7 +746,7 @@
                      ondragover="onDragOver(event, this)"
                      ondragleave="onDragLeave(event, this)"
                      ondrop="onDrop(event, this, 'sharedBannerImage', 'preview-banner', 'banner')">
-                    <input type="file" id="sharedBannerImage" accept="image/*" required
+                    <input type="file" id="sharedBannerImage" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" required
                            onchange="onFileSelect(event, 'dz-banner', 'preview-banner', 'banner')" />
                     <div class="dropzone-icon" id="dz-banner-icon">
                         <i class="fa-solid fa-cloud-arrow-up"></i>
@@ -891,7 +891,7 @@
                                  ondragleave="onDragLeave(event, this)"
                                  ondrop="onDrop(event, this, 'paymentProof', 'preview-receipt', 'receipt')">
                                 <input type="file" name="paymentProof" id="paymentProof"
-                                       accept="image/*" required
+                                       accept="image/jpeg,image/png,image/gif,image/webp,image/avif" required
                                        onchange="onFileSelect(event, 'dz-receipt', 'preview-receipt', 'receipt')" />
                                 <div class="dropzone-icon" id="dz-receipt-icon">
                                     <i class="fa-solid fa-camera"></i>

@@ -22,6 +22,59 @@ namespace DACS.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DACS.Models.BannerPayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PendingBannerUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PlaceId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ResponseCode")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TxnRef")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VnpTransactionNo")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlaceId");
+
+                    b.HasIndex("TxnRef")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("BannerPayments");
+                });
+
             modelBuilder.Entity("DACS.Models.ChatMessage", b =>
                 {
                     b.Property<int>("Id")
@@ -106,9 +159,6 @@ namespace DACS.Migrations
                     b.Property<string>("BannerUrl")
                         .HasColumnType("text");
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
@@ -128,6 +178,9 @@ namespace DACS.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("OpeningHours")
+                        .HasColumnType("text");
+
                     b.Property<string>("OwnerId")
                         .HasColumnType("text");
 
@@ -143,9 +196,13 @@ namespace DACS.Migrations
                     b.Property<int?>("StarRating")
                         .HasColumnType("integer");
 
-                    b.HasKey("Id");
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
 
-                    b.HasIndex("CategoryId");
+                    b.Property<string>("Website")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("OwnerId");
 
@@ -432,6 +489,39 @@ namespace DACS.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("PlacePlaceCategory", b =>
+                {
+                    b.Property<int>("CategoriesId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlacesId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CategoriesId", "PlacesId");
+
+                    b.HasIndex("PlacesId");
+
+                    b.ToTable("PlaceCategoryAssignments", (string)null);
+                });
+
+            modelBuilder.Entity("DACS.Models.BannerPayment", b =>
+                {
+                    b.HasOne("DACS.Models.Place", "Place")
+                        .WithMany()
+                        .HasForeignKey("PlaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Place");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DACS.Models.ChatMessage", b =>
                 {
                     b.HasOne("DACS.Models.Place", "Place")
@@ -480,17 +570,9 @@ namespace DACS.Migrations
 
             modelBuilder.Entity("DACS.Models.Place", b =>
                 {
-                    b.HasOne("DACS.Models.PlaceCategory", "Category")
-                        .WithMany("Places")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId");
-
-                    b.Navigation("Category");
 
                     b.Navigation("Owner");
                 });
@@ -576,16 +658,26 @@ namespace DACS.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PlacePlaceCategory", b =>
+                {
+                    b.HasOne("DACS.Models.PlaceCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DACS.Models.Place", null)
+                        .WithMany()
+                        .HasForeignKey("PlacesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DACS.Models.Place", b =>
                 {
                     b.Navigation("Comments");
 
                     b.Navigation("Images");
-                });
-
-            modelBuilder.Entity("DACS.Models.PlaceCategory", b =>
-                {
-                    b.Navigation("Places");
                 });
 #pragma warning restore 612, 618
         }

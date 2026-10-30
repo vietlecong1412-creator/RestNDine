@@ -1,3 +1,5 @@
+using System;
+using DACS.Helpers;
 using DACS.Models;
 using DACS.Repositories;
 using DACS.Services;
@@ -14,21 +16,21 @@ namespace DACS.Controllers
         private readonly IPlaceRepository _repo;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly DACS.Data.ApplicationDbContext _context;
-        private readonly IAiSummaryService _aiSummaryService;
-        private readonly VnPayService _vnPayService;
+        private readonly PlaceReviewService _reviews;
+        private readonly BannerPaymentService _bannerPayments;
 
         public PlaceController(
             IPlaceRepository repo,
             UserManager<IdentityUser> userManager,
             DACS.Data.ApplicationDbContext context,
-            IAiSummaryService aiSummaryService,
-            VnPayService vnPayService)
+            PlaceReviewService reviews,
+            BannerPaymentService bannerPayments)
         {
             _repo = repo;
             _userManager = userManager;
             _context = context;
-            _aiSummaryService = aiSummaryService;
-            _vnPayService = vnPayService;
+            _reviews = reviews;
+            _bannerPayments = bannerPayments;
         }
 
         // ─────────────────────────────────────
@@ -37,17 +39,16 @@ namespace DACS.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var place = await _repo.GetByIdAsync(id);
-            if (place == null) return NotFound();
+            if (place == null || !PlaceAccess.CanView(place, User)) return NotFound();
 
             // ── AI Summary Cache Logic ──
-            bool cacheValid = !string.IsNullOrEmpty(place.AiSummaryCache)
-                && place.AiSummaryCacheUpdatedAt.HasValue
-                && (!place.Comments.Any()
-                    || place.Comments.Max(c => c.CreatedAt) <= place.AiSummaryCacheUpdatedAt.Value);
-
-            if (cacheValid)
+            if (PlaceReviewService.IsAiCacheValid(place))
             {
                 ViewBag.AiSummary = place.AiSummaryCache;
+                var sentiment = PlaceReviewService.CountSentiment(place.Comments);
+                ViewBag.ChartPositive = sentiment.Positive;
+                ViewBag.ChartNeutral  = sentiment.Neutral;
+                ViewBag.ChartNegative = sentiment.Negative;
             }
             else
             {
@@ -74,19 +75,6 @@ namespace DACS.Controllers
             return View(place);
         }
 
-        private string FormatMarkdown(string txt)
-        {
-            if (string.IsNullOrEmpty(txt)) return "";
-            var parts = txt.Split("**");
-            var sb = new System.Text.StringBuilder();
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (i % 2 == 1) sb.Append("<strong>" + parts[i] + "</strong>");
-                else sb.Append(parts[i]);
-            }
-            return sb.ToString().Replace("\n", "<br/>");
-        }
-
         // ─────────────────────────────────────
         // GET: /Place/GetAiSummary
         // ─────────────────────────────────────
@@ -94,35 +82,21 @@ namespace DACS.Controllers
         public async Task<IActionResult> GetAiSummary(int placeId, bool forceRefresh = false)
         {
             var place = await _repo.GetByIdAsync(placeId);
-            if (place == null)
+            if (place == null || !PlaceAccess.CanView(place, User))
                 return Json(new { success = false, message = "Không tìm thấy địa điểm." });
 
-            bool cacheValid = !forceRefresh
-                && !string.IsNullOrEmpty(place.AiSummaryCache)
-                && place.AiSummaryCacheUpdatedAt.HasValue
-                && (!place.Comments.Any()
-                    || place.Comments.Max(c => c.CreatedAt) <= place.AiSummaryCacheUpdatedAt.Value);
+            // Chỉ chủ địa điểm và Admin được yêu cầu phân tích lại
+            forceRefresh = forceRefresh && PlaceAccess.CanManage(place, User);
 
-            string summary;
-            if (cacheValid)
+            var ai = await _reviews.GetAiSummaryAsync(place, forceRefresh);
+            var sentiment = PlaceReviewService.CountSentiment(place.Comments);
+            return Json(new
             {
-                summary = place.AiSummaryCache!;
-            }
-            else
-            {
-                var reviews = place.Comments?.Select(c => c.Content) ?? Enumerable.Empty<string>();
-                summary = await _aiSummaryService.SummarizeReviewsAsync(place.Name, reviews);
-
-                place.AiSummaryCache = summary;
-                place.AiSummaryCacheUpdatedAt = DateTime.UtcNow;
-                await _repo.UpdateAsync(place);
-            }
-
-            var html = FormatMarkdown(summary);
-            return Json(new { success = true, html = html });
+                success = true,
+                html = SafeMarkdown.ToHtml(ai.Summary),
+                chartData = new { positive = sentiment.Positive, neutral = sentiment.Neutral, negative = sentiment.Negative }
+            });
         }
-
-
 
         // ─────────────────────────────────────
         // GET: /Place/Create
@@ -130,32 +104,35 @@ namespace DACS.Controllers
         [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> Create()
         {
-            ViewBag.Categories = new SelectList(
-                await _context.PlaceCategories.ToListAsync(), "Id", "Name");
+            ViewBag.AllCategories = await _context.PlaceCategories.ToListAsync();
             return View();
         }
 
         // POST: /Place/Create
         [HttpPost]
         [Authorize(Roles = "Owner,Admin")]
-        public async Task<IActionResult> Create(Place place, Microsoft.AspNetCore.Http.IFormFile? image)
+        public async Task<IActionResult> Create(Place place, int[] selectedCategoryIds, Microsoft.AspNetCore.Http.IFormFile? image)
         {
+            ModelState.Remove("Categories");
+            bool hasImage = image != null && image.Length > 0;
+            if (hasImage && await ImageUpload.ValidateAsync(image) is string imageError)
+                ModelState.AddModelError(string.Empty, imageError);
+
             if (ModelState.IsValid)
             {
                 place.OwnerId = _userManager.GetUserId(User);
                 place.IsApproved = User.IsInRole("Admin");
 
-                if (image != null && image.Length > 0)
+                if (hasImage)
+                    place.ImageUrl = await ImageUpload.SaveAsync(image!, "places");
+
+                if (selectedCategoryIds.Length > 0)
                 {
-                    var fileExt = System.IO.Path.GetExtension(image.FileName);
-                    var fileName = Guid.NewGuid().ToString() + fileExt;
-                    var dir = System.IO.Path.Combine(
-                        System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "places");
-                    if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-                    var path = System.IO.Path.Combine(dir, fileName);
-                    using (var stream = new System.IO.FileStream(path, System.IO.FileMode.Create))
-                        await image.CopyToAsync(stream);
-                    place.ImageUrl = $"/images/places/{fileName}";
+                    var categories = await _context.PlaceCategories
+                        .Where(c => selectedCategoryIds.Contains(c.Id))
+                        .ToListAsync();
+                    foreach (var cat in categories)
+                        place.Categories.Add(cat);
                 }
 
                 await _repo.AddAsync(place);
@@ -167,8 +144,8 @@ namespace DACS.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            ViewBag.Categories = new SelectList(
-                await _context.PlaceCategories.ToListAsync(), "Id", "Name", place.CategoryId);
+            ViewBag.AllCategories = await _context.PlaceCategories.ToListAsync();
+            ViewBag.SelectedCategoryIds = selectedCategoryIds;
             return View(place);
         }
 
@@ -193,15 +170,15 @@ namespace DACS.Controllers
             if (place == null || (place.OwnerId != _userManager.GetUserId(User) && !User.IsInRole("Admin")))
                 return Unauthorized();
 
-            ViewBag.Categories = new SelectList(
-                await _context.PlaceCategories.ToListAsync(), "Id", "Name", place.CategoryId);
+            ViewBag.AllCategories = await _context.PlaceCategories.ToListAsync();
+            ViewBag.SelectedCategoryIds = place.Categories.Select(c => c.Id).ToArray();
             return View(place);
         }
 
         // POST: /Place/Edit/5
         [HttpPost]
         [Authorize(Roles = "Owner,Admin")]
-        public async Task<IActionResult> Edit(int id, Place updated, Microsoft.AspNetCore.Http.IFormFile? image)
+        public async Task<IActionResult> Edit(int id, Place updated, int[] selectedCategoryIds, Microsoft.AspNetCore.Http.IFormFile? image)
         {
             if (id != updated.Id) return BadRequest();
 
@@ -209,31 +186,39 @@ namespace DACS.Controllers
             if (place == null || (place.OwnerId != _userManager.GetUserId(User) && !User.IsInRole("Admin")))
                 return Unauthorized();
 
+            ModelState.Remove("Categories");
+            bool hasImage = image != null && image.Length > 0;
+            if (hasImage && await ImageUpload.ValidateAsync(image) is string imageError)
+                ModelState.AddModelError(string.Empty, imageError);
+
             if (ModelState.IsValid)
             {
-                if (image != null && image.Length > 0)
-                {
-                    var fileExt = System.IO.Path.GetExtension(image.FileName);
-                    var fileName = Guid.NewGuid().ToString() + fileExt;
-                    var dir = System.IO.Path.Combine(
-                        System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "places");
-                    if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-                    var path = System.IO.Path.Combine(dir, fileName);
-                    using (var stream = new System.IO.FileStream(path, System.IO.FileMode.Create))
-                        await image.CopyToAsync(stream);
-                    place.ImageUrl = $"/images/places/{fileName}";
-                }
+                if (hasImage)
+                    place.ImageUrl = await ImageUpload.SaveAsync(image!, "places");
 
-                place.Name        = updated.Name;
-                place.Address     = updated.Address;
-                place.Description = updated.Description;
-                place.Latitude    = updated.Latitude;
-                place.Longitude   = updated.Longitude;
-                place.PriceRange  = updated.PriceRange;
-                place.PhoneNumber = updated.PhoneNumber;
-                place.CategoryId  = updated.CategoryId;
-                place.StarRating  = updated.StarRating;
-                place.Amenities   = updated.Amenities;
+                place.Name         = updated.Name;
+                place.Address      = updated.Address;
+                place.Description  = updated.Description;
+                place.Latitude     = updated.Latitude;
+                place.Longitude    = updated.Longitude;
+                place.PriceRange   = updated.PriceRange;
+                place.PhoneNumber  = updated.PhoneNumber;
+                place.StarRating   = updated.StarRating;
+                place.Amenities    = updated.Amenities;
+                place.OpeningHours = updated.OpeningHours;
+                place.Website      = updated.Website;
+                place.Tags         = updated.Tags;
+
+                // Cập nhật categories: xóa cũ, thêm mới
+                place.Categories.Clear();
+                if (selectedCategoryIds.Length > 0)
+                {
+                    var categories = await _context.PlaceCategories
+                        .Where(c => selectedCategoryIds.Contains(c.Id))
+                        .ToListAsync();
+                    foreach (var cat in categories)
+                        place.Categories.Add(cat);
+                }
 
                 await _repo.UpdateAsync(place);
                 TempData["Success"] = "Cập nhật thông tin địa điểm thành công!";
@@ -244,8 +229,8 @@ namespace DACS.Controllers
                 return RedirectToAction(nameof(MyPlaces));
             }
 
-            ViewBag.Categories = new SelectList(
-                await _context.PlaceCategories.ToListAsync(), "Id", "Name", updated.CategoryId);
+            ViewBag.AllCategories = await _context.PlaceCategories.ToListAsync();
+            ViewBag.SelectedCategoryIds = selectedCategoryIds;
             return View(updated);
         }
 
@@ -287,6 +272,13 @@ namespace DACS.Controllers
             var place = await _repo.GetByIdAsync(id);
             if (place == null || (place.OwnerId != _userManager.GetUserId(User) && !User.IsInRole("Admin")))
                 return Unauthorized();
+
+            if (!BannerPaymentService.CanRequestBanner(place) && !User.IsInRole("Admin"))
+            {
+                TempData["Error"] = "Địa điểm này đang có banner hoặc yêu cầu banner chờ duyệt.";
+                return RedirectToAction("Details", new { id });
+            }
+
             return View(place);
         }
 
@@ -300,55 +292,31 @@ namespace DACS.Controllers
             if (place == null || (place.OwnerId != _userManager.GetUserId(User) && !User.IsInRole("Admin")))
                 return Unauthorized();
 
-            bool hasError = false;
-
-            if (bannerImage != null && bannerImage.Length > 0)
+            if (!BannerPaymentService.CanRequestBanner(place) && !User.IsInRole("Admin"))
             {
-                var ext = System.IO.Path.GetExtension(bannerImage.FileName);
-                var fn  = Guid.NewGuid().ToString() + ext;
-                var dir = System.IO.Path.Combine(
-                    System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "banners");
-                if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-                using var s = new System.IO.FileStream(
-                    System.IO.Path.Combine(dir, fn), System.IO.FileMode.Create);
-                await bannerImage.CopyToAsync(s);
-                place.BannerUrl = $"/images/banners/{fn}";
-            }
-            else
-            {
-                TempData["Error"] = "Vui lòng chọn ảnh banner hợp lệ.";
-                hasError = true;
+                TempData["Error"] = "Địa điểm này đang có banner hoặc yêu cầu banner chờ duyệt.";
+                return RedirectToAction("Details", new { id });
             }
 
-            if (!hasError)
+            // Kiểm tra cả 2 file trước khi lưu để không ghi banner khi thiếu biên lai
+            if (await ImageUpload.ValidateAsync(bannerImage) is string bannerError)
             {
-                if (paymentProof != null && paymentProof.Length > 0)
-                {
-                    var ext = System.IO.Path.GetExtension(paymentProof.FileName);
-                    var fn  = Guid.NewGuid().ToString() + ext;
-                    var dir = System.IO.Path.Combine(
-                        System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "payment");
-                    if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-                    using var s = new System.IO.FileStream(
-                        System.IO.Path.Combine(dir, fn), System.IO.FileMode.Create);
-                    await paymentProof.CopyToAsync(s);
-                    place.PaymentProofUrl = $"/images/payment/{fn}";
-                }
-                else
-                {
-                    TempData["Error"] = "Vui lòng upload ảnh biên lai chuyển khoản.";
-                    hasError = true;
-                }
+                TempData["Error"] = "Ảnh banner: " + bannerError;
+                return RedirectToAction("Details", new { id });
+            }
+            if (await ImageUpload.ValidateAsync(paymentProof) is string proofError)
+            {
+                TempData["Error"] = "Ảnh biên lai chuyển khoản: " + proofError;
+                return RedirectToAction("Details", new { id });
             }
 
-            if (!hasError)
-            {
-                place.BannerStatus = User.IsInRole("Admin") ? BannerStatus.Active : BannerStatus.PendingPayment;
-                await _repo.UpdateAsync(place);
-                TempData["Success"] = User.IsInRole("Admin")
-                    ? "Banner đã được kích hoạt!"
-                    : "Yêu cầu banner đã được gửi và đang chờ Admin xác nhận thanh toán.";
-            }
+            place.BannerUrl       = await ImageUpload.SaveAsync(bannerImage, "banners");
+            place.PaymentProofUrl = await ImageUpload.SaveAsync(paymentProof, "payment");
+            place.BannerStatus    = User.IsInRole("Admin") ? BannerStatus.Active : BannerStatus.PendingPayment;
+            await _repo.UpdateAsync(place);
+            TempData["Success"] = User.IsInRole("Admin")
+                ? "Banner đã được kích hoạt!"
+                : "Yêu cầu banner đã được gửi và đang chờ Admin xác nhận thanh toán.";
 
             return RedirectToAction("Details", new { id });
         }
@@ -384,17 +352,13 @@ namespace DACS.Controllers
                 return RedirectToAction("Details", new { id });
             }
 
-            if (bannerImage != null && bannerImage.Length > 0)
+            if (await ImageUpload.ValidateAsync(bannerImage) is string bannerError)
             {
-                var ext = System.IO.Path.GetExtension(bannerImage.FileName);
-                var fn  = Guid.NewGuid().ToString() + ext;
-                var dir = System.IO.Path.Combine(
-                    System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "banners");
-                if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-                
-                var filePath = System.IO.Path.Combine(dir, fn);
-                using (var s = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
-                    await bannerImage.CopyToAsync(s);
+                TempData["Error"] = bannerError;
+            }
+            else
+            {
+                var newBannerUrl = await ImageUpload.SaveAsync(bannerImage, "banners");
 
                 // Xóa ảnh cũ nếu có để tránh rác server
                 if (!string.IsNullOrEmpty(place.BannerUrl))
@@ -407,13 +371,9 @@ namespace DACS.Controllers
                     }
                 }
 
-                place.BannerUrl = $"/images/banners/{fn}";
+                place.BannerUrl = newBannerUrl;
                 await _repo.UpdateAsync(place);
                 TempData["Success"] = "Đã tải lên/cập nhật ảnh banner thành công!";
-            }
-            else
-            {
-                TempData["Error"] = "Vui lòng chọn ảnh banner hợp lệ.";
             }
 
             return RedirectToAction("Details", new { id });
@@ -427,28 +387,10 @@ namespace DACS.Controllers
         public async Task<IActionResult> AddComment(int placeId, string content, int rating = 5)
         {
             if (string.IsNullOrWhiteSpace(content)) return BadRequest();
-            rating = Math.Clamp(rating, 1, 5);
-
-            var comment = new PlaceComment
-            {
-                PlaceId   = placeId,
-                Content   = content,
-                Rating    = rating,
-                UserId    = _userManager.GetUserId(User)!,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.PlaceComments.Add(comment);
-            await _context.SaveChangesAsync();
-
-            // Invalidate AI summary cache vì có bình luận mới
             var place = await _repo.GetByIdAsync(placeId);
-            if (place != null)
-            {
-                place.AiSummaryCache = null;
-                place.AiSummaryCacheUpdatedAt = null;
-                await _repo.UpdateAsync(place);
-            }
+            if (place == null || !PlaceAccess.CanView(place, User)) return NotFound();
+
+            await _reviews.AddCommentAsync(place, _userManager.GetUserId(User)!, content, rating);
 
             return RedirectToAction("Details", new { id = placeId });
         }
@@ -464,29 +406,13 @@ namespace DACS.Controllers
             if (userId == null)
                 return Json(new { success = false, message = "Bạn cần đăng nhập để bình chọn." });
 
-            var comment = await _context.PlaceComments.FindAsync(commentId);
-            if (comment == null)
-                return Json(new { success = false, message = "Không tìm thấy bình luận." });
-
-            // Kiểm tra xem user đã vote chưa (chống duplicate ở tầng DB)
-            bool alreadyVoted = await _context.CommentHelpfulVotes
-                .AnyAsync(v => v.CommentId == commentId && v.UserId == userId);
-
-            if (alreadyVoted)
-                return Json(new { success = false, alreadyVoted = true, message = "Bạn đã bình chọn bình luận này rồi." });
-
-            // Ghi nhận lượt vote mới
-            _context.CommentHelpfulVotes.Add(new CommentHelpfulVote
+            var vote = await _reviews.VoteHelpfulAsync(commentId, userId, User);
+            return vote.Status switch
             {
-                CommentId = commentId,
-                UserId    = userId,
-                VotedAt   = DateTime.UtcNow
-            });
-
-            comment.HelpfulCount++;
-            await _context.SaveChangesAsync();
-
-            return Json(new { success = true, newCount = comment.HelpfulCount });
+                HelpfulVoteStatus.NotFound => Json(new { success = false, message = "Không tìm thấy bình luận." }),
+                HelpfulVoteStatus.AlreadyVoted => Json(new { success = false, alreadyVoted = true, message = "Bạn đã bình chọn bình luận này rồi." }),
+                _ => Json(new { success = true, newCount = vote.HelpfulCount })
+            };
         }
 
         // ─────────────────────────────────────
@@ -500,22 +426,13 @@ namespace DACS.Controllers
             if (place == null || (place.OwnerId != _userManager.GetUserId(User) && !User.IsInRole("Admin")))
                 return Unauthorized();
 
-            if (image == null || image.Length == 0)
+            if (await ImageUpload.ValidateAsync(image) is string imageError)
             {
-                TempData["Error"] = "Vui lòng chọn file ảnh hợp lệ.";
+                TempData["Error"] = imageError;
                 return RedirectToAction("Details", new { id = placeId });
             }
 
-            var ext = System.IO.Path.GetExtension(image.FileName);
-            var fn  = Guid.NewGuid().ToString() + ext;
-            var dir = System.IO.Path.Combine(
-                System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "places");
-            if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-            var filePath = System.IO.Path.Combine(dir, fn);
-            using (var stream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
-                await image.CopyToAsync(stream);
-
-            var img = new PlaceImage { PlaceId = placeId, ImageUrl = $"/images/places/{fn}" };
+            var img = new PlaceImage { PlaceId = placeId, ImageUrl = await ImageUpload.SaveAsync(image, "places") };
             _context.PlaceImages.Add(img);
             await _context.SaveChangesAsync();
 
@@ -561,102 +478,94 @@ namespace DACS.Controllers
             if (place == null || (place.OwnerId != _userManager.GetUserId(User) && !User.IsInRole("Admin")))
                 return Unauthorized();
 
-            if (bannerImage == null || bannerImage.Length == 0)
+            if (!BannerPaymentService.CanRequestBanner(place))
             {
-                TempData["Error"] = "Vui lòng chọn tệp ảnh banner trước khi tiến hành thanh toán.";
+                TempData["Error"] = "Địa điểm này đang có banner hoặc yêu cầu banner chờ duyệt.";
+                return RedirectToAction("Details", new { id });
+            }
+
+            if (await ImageUpload.ValidateAsync(bannerImage) is string bannerError)
+            {
+                TempData["Error"] = bannerError;
                 return RedirectToAction("Payment", new { id });
             }
 
-            // Lưu ảnh banner
-            var ext = System.IO.Path.GetExtension(bannerImage.FileName);
-            var fn  = Guid.NewGuid().ToString() + ext;
-            var dir = System.IO.Path.Combine(
-                System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "banners");
-            if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-            
-            var filePath = System.IO.Path.Combine(dir, fn);
-            using (var s = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
-                await bannerImage.CopyToAsync(s);
-
-            // Dọn dẹp ảnh cũ nếu có
-            if (!string.IsNullOrEmpty(place.BannerUrl))
-            {
-                var oldPath = System.IO.Path.Combine(
-                    System.IO.Directory.GetCurrentDirectory(), "wwwroot", place.BannerUrl.TrimStart('/'));
-                if (System.IO.File.Exists(oldPath))
-                {
-                    try { System.IO.File.Delete(oldPath); } catch {}
-                }
-            }
-
-            place.BannerUrl = $"/images/banners/{fn}";
-            await _repo.UpdateAsync(place);
-
-            // Tạo mã đơn hàng duy nhất: banner-{placeId}-{timestamp}
-            var orderId = $"banner-{id}-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-
-            var paymentRequest = new DACS.Services.VnPayPaymentRequest
-            {
-                OrderId   = orderId,
-                OrderInfo = $"Quang cao banner Place {id}",
-                Amount    = 100000, // 100,000 VNĐ
-                CreatedAt = DateTime.Now
-            };
-
-            var paymentUrl = _vnPayService.CreatePaymentUrl(HttpContext, paymentRequest);
+            // Ảnh chỉ được gắn vào Place sau khi thanh toán thành công
+            var pendingBannerUrl = await ImageUpload.SaveAsync(bannerImage, "banners");
+            var paymentUrl = await _bannerPayments.CreateCheckoutAsync(
+                HttpContext, id, _userManager.GetUserId(User), pendingBannerUrl);
             return Redirect(paymentUrl);
         }
 
         // ─────────────────────────────────────
-        // VNPay – Callback (Return URL)
+        // VNPay – Callback (Return URL, qua trình duyệt người dùng)
         // ─────────────────────────────────────
         public async Task<IActionResult> VnpayReturn()
         {
-            // Xác thực chữ ký từ VNPAY
-            bool isValid = _vnPayService.ValidateSignature(Request.Query, out string responseCode);
+            var result = await _bannerPayments.ProcessCallbackAsync(Request.Query);
 
-            if (!isValid)
+            switch (result.Outcome)
             {
-                TempData["Error"] = "Chữ ký không hợp lệ. Vui lòng liên hệ hỗ trợ.";
-                return RedirectToAction("Index", "Home");
-            }
+                case BannerPaymentOutcome.InvalidSignature:
+                    TempData["Error"] = "Chữ ký không hợp lệ. Vui lòng liên hệ hỗ trợ.";
+                    return RedirectToAction("Index", "Home");
 
-            // Lấy placeId từ vnp_TxnRef (dạng "banner-{placeId}-{timestamp}")
-            var txnRef = Request.Query["vnp_TxnRef"].ToString();
-            var parts  = txnRef.Split('-');
-            if (parts.Length < 2 || !int.TryParse(parts[1], out int placeId))
+                case BannerPaymentOutcome.NotFound:
+                    TempData["Error"] = "Không xác định được đơn hàng.";
+                    return RedirectToAction("Index", "Home");
+
+                case BannerPaymentOutcome.InvalidAmount:
+                    TempData["Error"] = "Số tiền giao dịch không khớp. Vui lòng liên hệ hỗ trợ.";
+                    return RedirectToAction("Details", new { id = result.PlaceId });
+
+                case BannerPaymentOutcome.AlreadyProcessed:
+                    // IPN có thể đã xử lý trước, nên vẫn báo đúng kết quả của giao dịch
+                    if (result.Status == BannerPaymentStatus.Paid)
+                        TempData["Success"] = "Giao dịch này đã được ghi nhận thành công trước đó.";
+                    else
+                        TempData["Error"] = "Giao dịch này đã thất bại hoặc đã bị hủy. Vui lòng tạo giao dịch mới.";
+                    return RedirectToAction("Details", new { id = result.PlaceId });
+
+                case BannerPaymentOutcome.Paid:
+                    TempData["Success"] = $"Thanh toán VNPay thành công! Yêu cầu banner của {result.PlaceName} đang chờ Admin phê duyệt.";
+                    return RedirectToAction("Details", new { id = result.PlaceId });
+
+                case BannerPaymentOutcome.PaidNotApplied:
+                    TempData["Error"] = "Đã nhận thanh toán nhưng địa điểm đang có banner khác. Vui lòng liên hệ Admin để được hỗ trợ.";
+                    return RedirectToAction("Details", new { id = result.PlaceId });
+
+                default:
+                    // Thanh toán thất bại hoặc bị hủy
+                    TempData["Error"] = result.ResponseCode switch
+                    {
+                        "24" => "Giao dịch bị hủy bởi người dùng.",
+                        "11" => "Giao dịch hết hạn. Vui lòng thử lại.",
+                        "09" => "Thẻ/tài khoản chưa đăng ký dịch vụ.",
+                        _    => $"Thanh toán thất bại (Mã lỗi: {result.ResponseCode})."
+                    };
+                    return RedirectToAction("Payment", new { id = result.PlaceId });
+            }
+        }
+
+        // ─────────────────────────────────────
+        // VNPay – IPN (server VNPay gọi trực tiếp, không phụ thuộc trình duyệt người dùng)
+        // ─────────────────────────────────────
+        [HttpGet]
+        public async Task<IActionResult> VnpayIpn()
+        {
+            var result = await _bannerPayments.ProcessCallbackAsync(Request.Query);
+
+            var (rspCode, message) = result.Outcome switch
             {
-                TempData["Error"] = "Không xác định được đơn hàng.";
-                return RedirectToAction("Index", "Home");
-            }
+                BannerPaymentOutcome.InvalidSignature => ("97", "Invalid signature"),
+                BannerPaymentOutcome.NotFound => ("01", "Order not found"),
+                BannerPaymentOutcome.InvalidAmount => ("04", "Invalid amount"),
+                BannerPaymentOutcome.AlreadyProcessed => ("02", "Order already confirmed"),
+                _ => ("00", "Confirm Success")
+            };
 
-            var place = await _repo.GetByIdAsync(placeId);
-            if (place == null) return NotFound();
-
-            // Mã "00" = thanh toán thành công
-            if (responseCode == "00")
-            {
-                // Chuyển trạng thái sang chờ Admin phê duyệt (thay vì kích hoạt ngay)
-                place.BannerStatus    = BannerStatus.PendingPayment;
-                place.PaymentProofUrl = $"vnpay:{txnRef}"; // lưu mã giao dịch làm bằng chứng
-                await _repo.UpdateAsync(place);
-
-                TempData["VnpaySuccess"] = $"Thanh toán VNPay thành công! Yêu cầu banner của <strong>{place.Name}</strong> đã được lưu và đang chờ Admin phê duyệt.";
-                return RedirectToAction("Details", new { id = placeId });
-            }
-            else
-            {
-                // Thanh toán thất bại hoặc bị hủy
-                string msg = responseCode switch
-                {
-                    "24" => "Giao dịch bị hủy bởi người dùng.",
-                    "11" => "Giao dịch hết hạn. Vui lòng thử lại.",
-                    "09" => "Thẻ/tài khoản chưa đăng ký dịch vụ.",
-                    _    => $"Thanh toán thất bại (Mã lỗi: {responseCode})."
-                };
-                TempData["Error"] = msg;
-                return RedirectToAction("Payment", new { id = placeId });
-            }
+            // VNPay yêu cầu đúng tên trường RspCode/Message nên không dùng camelCase mặc định
+            return Json(new { RspCode = rspCode, Message = message }, new System.Text.Json.JsonSerializerOptions());
         }
     }
 }

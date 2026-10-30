@@ -114,7 +114,112 @@
             display: flex !important;
         }
     }
+
+    /* ── Price Range Input ── */
+    .price-input-container {
+        padding: 7px 10px 10px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin: 4px 0 8px;
+    }
+    .dark-theme .price-input-container {
+        background: rgba(255,255,255,0.06);
+        border-color: rgba(255,255,255,0.1);
+    }
+    .price-input-label {
+        font-size: 0.75rem; color: #64748b; font-weight: 600;
+        margin-bottom: 6px; display: block;
+    }
+    .dark-theme .price-input-label { color: #94a3b8; }
+    .price-input-row {
+        display: flex; align-items: center; gap: 6px;
+    }
+    .price-input-field {
+        flex: 1; min-width: 0;
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        color: #111827;
+        font-weight: 600;
+        font-size: 0.82rem; padding: 5px 8px;
+        outline: none; transition: border-color .15s;
+        -moz-appearance: textfield;
+    }
+    .price-input-field::-webkit-outer-spin-button,
+    .price-input-field::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .price-input-field:focus { border-color: var(--primary, #f97316); }
+    .price-input-field::placeholder { color: #9ca3af; font-size: 0.75rem; font-weight: 400; }
+    .dark-theme .price-input-field {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.2);
+        color: #f1f5f9;
+    }
+    .dark-theme .price-input-field::placeholder { color: #64748b; }
+    .price-input-sep { color: var(--text-muted, #64748b); font-size: 0.8rem; flex-shrink: 0; }
+    .price-input-reset {
+        background: none; border: none; cursor: pointer; padding: 4px 5px;
+        color: var(--text-muted, #94a3b8); font-size: 0.72rem; border-radius: 6px;
+        flex-shrink: 0; line-height: 1; display: none;
+    }
+    .price-input-reset:hover { color: var(--primary, #f97316); }
+    .restaurant-item-meta { flex-wrap: wrap; gap: 3px; }
+
+    /* ── Description search bar ── */
+    .desc-search-bar {
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 10px 20px 8px;
+    }
+    .dark-theme .desc-search-bar {
+        background: #1e293b;
+        border-bottom-color: rgba(255,255,255,0.08);
+    }
+    .desc-search-inner {
+        display: flex; align-items: center; gap: 10px;
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 8px 14px;
+        transition: border-color .2s;
+    }
+    .dark-theme .desc-search-inner {
+        background: rgba(255,255,255,0.05);
+        border-color: rgba(255,255,255,0.12);
+    }
+    .desc-search-inner:focus-within {
+        border-color: var(--primary, #f97316);
+        box-shadow: 0 0 0 3px rgba(249,115,22,0.12);
+    }
+    .desc-search-icon { font-size: 1rem; flex-shrink: 0; }
+    .desc-search-input {
+        flex: 1; border: none; background: transparent; outline: none;
+        font-size: 0.88rem; color: #1e293b;
+    }
+    .dark-theme .desc-search-input { color: #f1f5f9; }
+    .desc-search-input::placeholder { color: #94a3b8; }
+    .desc-search-clear {
+        background: none; border: none; cursor: pointer;
+        color: #94a3b8; font-size: 0.8rem; padding: 2px 4px;
+        flex-shrink: 0; border-radius: 4px;
+    }
+    .desc-search-clear:hover { color: var(--primary, #f97316); }
+    .desc-search-hint {
+        font-size: 0.75rem; color: #64748b; margin-top: 5px; padding-left: 2px;
+    }
+    .dark-theme .desc-search-hint { color: #94a3b8; }
+    .desc-search-hint b { color: var(--primary, #f97316); }
 </style>
+
+<div class="desc-search-bar" id="desc-search-bar">
+    <div class="desc-search-inner">
+        <span class="desc-search-icon">✨</span>
+        <input id="desc-search-input" type="text" class="desc-search-input"
+               placeholder="Mô tả nơi bạn muốn tìm... vd: &quot;quán yên tĩnh trên Nguyễn Huệ có view đẹp&quot;" />
+        <button id="desc-search-clear" class="desc-search-clear" style="display:none;" title="Xóa">✕</button>
+    </div>
+    <div id="desc-search-hint" class="desc-search-hint" style="display:none;"></div>
+</div>
 
 <div class="map-layout">
     @* ── Sidebar ── *@
@@ -157,13 +262,14 @@
                     </div>
                 </div>
 
-                @* Tầm giá quick chips *@
-                <div class="price-chips-container">
-                    <div class="price-chips" id="price-chips">
-                        <button class="price-chip active" data-price="all">💰 Tất cả giá</button>
-                        <button class="price-chip" data-price="cheap">💸 Giá rẻ</button>
-                        <button class="price-chip" data-price="medium">💸 Vừa phải</button>
-                        <button class="price-chip" data-price="premium">💎 Cao cấp</button>
+                @* Tầm giá inputs *@
+                <div class="price-input-container">
+                    <span class="price-input-label">💰 Tầm giá (nghìn đồng)</span>
+                    <div class="price-input-row">
+                        <input id="price-min-input" type="number" class="price-input-field" placeholder="Từ" min="0" step="10" />
+                        <span class="price-input-sep">—</span>
+                        <input id="price-max-input" type="number" class="price-input-field" placeholder="Đến" min="0" step="10" />
+                        <button id="price-input-reset" class="price-input-reset" title="Xóa bộ lọc giá">✕</button>
                     </div>
                 </div>
 
@@ -317,13 +423,12 @@
 (function () {
     // ── Combined Data ──
     var allPlaces = @Html.Raw(Json.Serialize(Model.Places)) || [];
-    allPlaces.forEach(function(x) {
-        if (x.categoryId === 2) {
-            x.itemType = 'hotel';
-        } else {
-            x.itemType = 'restaurant';
-            x.isCafe = (x.categoryId === 3);
-        }
+    allPlaces.forEach(function(x, i) {
+        x._idx = i;
+        var slugs = x.categorySlugs || [];
+        x.isHotel      = slugs.includes('hotel');
+        x.isRestaurant = slugs.includes('restaurant');
+        x.isCafe       = slugs.includes('cafe');
     });
 
     // ── Map init ──
@@ -333,15 +438,16 @@
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // ── Map Tile Layers ──
-    var voyagerTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+    var voyagerTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxNativeZoom: 19,
         maxZoom: 20
     }).addTo(map);
 
-    var darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 20
-    });
+    var darkTiles = L.layerGroup([
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxNativeZoom: 16, maxZoom: 20 }),
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 20 })
+    ]);
 
     // ── Synchronized Map Theme Selector Event ──
     function setMapStyle(style, dispatchEvent) {
@@ -393,8 +499,8 @@
 
     // ── Leaflet custom markers ──
     function makeIcon(r, active) {
-        var isHotel = (r.itemType === 'hotel');
-        var isCafe = (r.itemType === 'restaurant' && r.isCafe);
+        var isHotel = r.isHotel;
+        var isCafe = r.isCafe && !r.isRestaurant;
         var color;
         var emoji;
         if (isHotel) {
@@ -429,8 +535,21 @@
     var userLatLng      = null;
     var userMarker      = null;
     var userAccuracyCircle = null;
-    var activeCategoryFilter = 'all'; // 'all' | 'restaurant' | 'hotel'
-    var activePriceFilter = 'all';   // 'all' | 'cheap' | 'medium' | 'premium'
+    var activeCategoryFilters = new Set(); // empty = all
+    var priceSliderMin = 0; // 0 = no lower bound
+    var priceSliderMax = 0; // 0 = no upper bound
+    var descTerms = []; // tokenized description search
+
+    var STOP_WORDS = new Set([
+        'tôi','tui','bạn','mình','họ','chúng','ta','các','những','một','hai','ba','và','hay','hoặc',
+        'là','có','không','được','cho','với','trong','ngoài','trên','dưới','tại','ở','về','từ',
+        'của','này','đó','kia','đây','thì','mà','để','vì','nên','nhưng','tuy','dù','vậy',
+        'muốn','tìm','cần','xem','hỏi','biết','thấy','đang','đã','sẽ','rất','quá',
+        'cũng','nữa','thôi','nhé','ạ','ơi','nhỉ','vẫn','còn','đều','chỉ','mới','lại',
+        'nơi','chỗ','nào','gì','sao','như','hơn','nhất','bị','theo','qua','lên','xuống',
+        'me','my','i','a','an','the','is','are','was','were','be','been','have','has','had',
+        'do','does','did','will','would','could','should','may','might','shall','can',
+    ]);
     var currentRouteLine = null;
     var currentRouteAnimMarker = null;
 
@@ -459,67 +578,46 @@
     // ── Price filter logic ──
     function extractPriceNums(str) {
         if (!str) return null;
-        // Clean thousand separators (dots) first
         var cleanStr = str.replace(/\./g, '');
         var nums = cleanStr.match(/\d+/g);
         if (!nums || nums.length === 0) return null;
         var arr = nums.map(function(numStr) {
             var val = Number(numStr);
-            // Support "k" format (e.g. 50k -> 50000)
-            if (str.toLowerCase().includes('k') && val < 1000) {
-                val = val * 1000;
-            }
-            // Support "triệu" / "tr" format (e.g. 1.5tr -> 1500000)
-            if ((str.toLowerCase().includes('triệu') || str.toLowerCase().includes('tr')) && val < 1000) {
-                val = val * 1000000;
-            }
+            if (str.toLowerCase().includes('k') && val < 1000) val = val * 1000;
+            if ((str.toLowerCase().includes('triệu') || str.toLowerCase().includes('tr')) && val < 1000) val = val * 1000000;
             return val;
         });
         return { min: Math.min.apply(null, arr), max: Math.max.apply(null, arr) };
     }
-    function matchPrice(r, filter) {
-        if (filter === 'all') return true;
-        var raw = (r.priceRange || '').toLowerCase();
-        var p   = extractPriceNums(r.priceRange);
+    function matchPrice(r) {
+        if (priceSliderMin <= 0 && priceSliderMax <= 0) return true;
+        var p = extractPriceNums(r.priceRange);
+        if (!p) return true;
+        var hi = priceSliderMax > 0 ? priceSliderMax : Infinity;
+        return p.min <= hi && p.max >= priceSliderMin;
+    }
 
-        // ── KHÁCH SẠN ──
-        // Giá rẻ:   min <= 500.000đ/đêm
-        // Vừa phải: min <= 1.200.000đ/đêm
-        // Cao cấp:  max >= 1.000.000đ/đêm
-        if (r.itemType === 'hotel') {
-            if (p === null) return filter === 'all';
-            if (filter === 'cheap')   return p.min <= 500000;
-            if (filter === 'medium')  return p.min <= 1200000;
-            if (filter === 'premium') return p.max >= 1000000;
-        }
+    // ── Ảnh minh hoạ theo loại địa điểm (cùng quy tắc với PlaceFallbackImage.cs) ──
+    function placeFallback(r) {
+        var type = r.isHotel ? 'hotel' : (r.isCafe ? 'cafe' : 'restaurant');
+        return '/images/fallback/' + type + '-' + (r.id % 4 + 1) + '.jpg';
+    }
 
-        // ── QUÁN CAFE / TRÀ SỮA ──
-        // Giá rẻ:   max <= 25.000đ (Cafe cóc, cafe bình dân vỉa hè)
-        // Vừa phải: max <= 50.000đ (Highlands Coffee, trà sữa trung bình)
-        // Cao cấp:  max >= 45.000đ (Katinat, Phúc Long, Starbucks)
-        if (r.itemType === 'restaurant' && r.isCafe) {
-            if (p === null) return filter === 'all';
-            if (filter === 'cheap')   return p.max <= 25000;
-            if (filter === 'medium')  return p.max > 25000 && p.max <= 50000;
-            if (filter === 'premium') return p.max >= 45000;
-        }
-
-        // ── NHÀ HÀNG / QUÁN ĂN ──
-        // Giá rẻ:   max <= 45.000đ (Cơm tấm vỉa hè, bánh mì, hủ tiếu bình dân)
-        // Vừa phải: max <= 90.000đ (Phở Lệ, quán ăn gia đình)
-        // Cao cấp:  max >= 80.000đ (Buffet, nhà hàng nướng/lẩu lớn)
-        if (p === null) return filter === 'all';
-        if (filter === 'cheap')   return p.max <= 45000;
-        if (filter === 'medium')  return p.max > 45000 && p.max <= 90000;
-        if (filter === 'premium') return p.max >= 80000;
-
-        return true;
+    // ── Escape dữ liệu do người dùng nhập trước khi ghép vào HTML ──
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     // ── Build popup HTML ──
     function buildPopup(r) {
-        var desc  = r.description ? '<div class="popup-desc">'+r.description+'</div>' : '';
-        var price = r.priceRange  ? '<div class="popup-price">💰 '+r.priceRange+'</div>' : '';
+        var desc  = r.description ? '<div class="popup-desc">'+escapeHtml(r.description)+'</div>' : '';
+        var price = r.priceRange  ? '<div class="popup-price">💰 '+escapeHtml(r.priceRange)+'</div>' : '';
         var distHtml = '';
         if (userLatLng && r.latitude && r.longitude) {
             distHtml = '<div class="popup-dist">🚶 '+
@@ -528,21 +626,21 @@
         }
         var typeLabel;
         var typeStyle;
-        if (r.itemType === 'hotel') {
+        if (r.isHotel) {
             typeLabel = '🏨 Khách sạn';
             typeStyle = 'color:#2563eb';
-        } else if (r.isCafe) {
-            typeLabel = '☕ Quán Cafe';
-            typeStyle = 'color:#854d0e';
-        } else {
+        } else if (r.isRestaurant) {
             typeLabel = '🍴 Nhà hàng';
             typeStyle = 'color:#ef4444';
+        } else {
+            typeLabel = '☕ Quán Cafe';
+            typeStyle = 'color:#854d0e';
         }
         
         return '<div class="popup-card">'+
                '<div class="popup-type" style="font-size: 0.7rem; font-weight: 700; ' + typeStyle + '; margin-bottom: 2px;">' + typeLabel + '</div>'+
-               '<div class="popup-name">'+r.name+'</div>'+
-               '<div class="popup-addr">📍 '+(r.address||'Chưa có địa chỉ')+'</div>'+
+               '<div class="popup-name">'+escapeHtml(r.name)+'</div>'+
+               '<div class="popup-addr">📍 '+(escapeHtml(r.address)||'Chưa có địa chỉ')+'</div>'+
                price+distHtml+desc+
                '<button class="btn-popup-more mt-2 w-100" onclick="window.triggerDetailView(' + allPlaces.indexOf(r) + ')">Xem chi tiết ở sidebar</button>'+
                '</div>';
@@ -550,7 +648,7 @@
 
     // ── Build sidebar card HTML ──
     function buildCard(r, i) {
-        var priceTag  = r.priceRange ? '<span class="card-price-tag">'+r.priceRange+'</span>' : '';
+        var priceTag  = r.priceRange ? '<span class="card-price-tag">'+escapeHtml(r.priceRange)+'</span>' : '';
         var distBadge = '';
         if (userLatLng && r.latitude && r.longitude) {
             distBadge = '<span class="card-dist-badge">🚶 '+
@@ -558,33 +656,24 @@
                 '</span>';
         }
         
-        var tagColor, tagEmoji;
-        if (r.itemType === 'hotel') {
-            tagColor = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
-            tagEmoji = '🏨 Khách sạn';
-        } else if (r.isCafe) {
-            tagColor = 'linear-gradient(135deg, #854d0e, #a16207)';
-            tagEmoji = '☕ Quán Cafe';
-        } else {
-            tagColor = 'linear-gradient(135deg, #ef4444, #dc2626)';
-            tagEmoji = '🍴 Nhà hàng';
-        }
-        var typeBadge = '<span class="badge" style="background: ' + tagColor + '; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; margin-right: 4px;">' + tagEmoji + '</span>';
+        var typeBadge = '';
+        var badgeStyle = 'color:white;padding:3px 8px;border-radius:4px;font-size:0.65rem;font-weight:bold;margin-right:4px;white-space:nowrap;';
+        if (r.isHotel)      typeBadge += '<span class="badge" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);' + badgeStyle + '">🏨 Khách sạn</span>';
+        if (r.isRestaurant) typeBadge += '<span class="badge" style="background:linear-gradient(135deg,#ef4444,#dc2626);' + badgeStyle + '">🍴 Nhà hàng</span>';
+        if (r.isCafe)       typeBadge += '<span class="badge" style="background:linear-gradient(135deg,#854d0e,#a16207);' + badgeStyle + '">☕ Quán Cafe</span>';
         
-        var fallbackImg = r.itemType === 'hotel' ? 
-            'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=150&fit=crop&q=80' : 
-            (r.isCafe ? 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=150&fit=crop&q=80' : 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=150&fit=crop&q=80');
+        var fallbackImg = placeFallback(r);
 
         return '<div class="restaurant-item" id="item-'+i+'" data-idx="'+i+'">'+
                '<div class="restaurant-item-img">'+
-               '    <img src="'+ (r.imageUrl || fallbackImg) +'" alt="place thumb" />'+
+               '    <img src="'+ escapeHtml(r.imageUrl || fallbackImg) +'" data-fallback="'+ fallbackImg +'" alt="place thumb" />'+
                '</div>'+
                '<div class="restaurant-item-info">'+
-               '    <div class="restaurant-item-name">'+r.name+'</div>'+
+               '    <div class="restaurant-item-name">'+escapeHtml(r.name)+'</div>'+
                '    <div class="restaurant-item-meta">'+
                '        ' + typeBadge + priceTag + distBadge +
                '    </div>'+
-               '    <div class="restaurant-item-addr">📍 '+(r.address||'—')+'</div>'+
+               '    <div class="restaurant-item-addr">📍 '+(escapeHtml(r.address)||'—')+'</div>'+
                '</div></div>';
     }
 
@@ -646,9 +735,9 @@
         
         var descLabel = document.getElementById('detail-desc-label');
         if (descLabel) {
-            descLabel.textContent = r.itemType === 'hotel' ? 'Mô tả khách sạn' : (r.isCafe ? 'Mô tả quán cafe' : 'Mô tả quán ăn');
+            descLabel.textContent = r.isHotel ? 'Mô tả khách sạn' : (r.isRestaurant ? 'Mô tả quán ăn' : 'Mô tả quán cafe');
         }
-        document.getElementById('detail-desc').textContent = r.description || (r.itemType === 'hotel' ? 'Chưa có mô tả chi tiết cho khách sạn này.' : (r.isCafe ? 'Chưa có mô tả chi tiết cho quán cafe này.' : 'Chưa có mô tả chi tiết cho quán ăn này.'));
+        document.getElementById('detail-desc').textContent = r.description || (r.isHotel ? 'Chưa có mô tả chi tiết cho khách sạn này.' : (r.isRestaurant ? 'Chưa có mô tả chi tiết cho quán ăn này.' : 'Chưa có mô tả chi tiết cho quán cafe này.'));
         
         var phoneVal = r.phoneNumber || 'Không có';
         document.getElementById('detail-phone').textContent = phoneVal;
@@ -664,7 +753,7 @@
         
         // Hotel Specific Meta
         var hotelMeta = document.getElementById('detail-hotel-meta');
-        if (r.itemType === 'hotel') {
+        if (r.isHotel) {
             hotelMeta.style.display = 'flex';
             
             // Star rating
@@ -692,7 +781,7 @@
                     else if (lower.includes('sáng') || lower.includes('buffet')) icon = '🍳';
                     else if (lower.includes('sông') || lower.includes('cận')) icon = '🌊';
                     
-                    amenitiesEl.innerHTML += '<span class="amenity-tag" style="background: rgba(37, 99, 235, 0.08); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.15); border-radius: 4px; padding: 2px 8px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">' + icon + ' ' + amen + '</span>';
+                    amenitiesEl.innerHTML += '<span class="amenity-tag" style="background: rgba(37, 99, 235, 0.08); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.15); border-radius: 4px; padding: 2px 8px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">' + icon + ' ' + escapeHtml(amen) + '</span>';
                 });
             }
         } else {
@@ -701,11 +790,11 @@
         
         // Image
         var detailImg = document.getElementById('detail-img');
-        var fallbackImg = r.itemType === 'hotel' ? 
-            'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=600&fit=crop&q=85' : 
-            (r.isCafe ? 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&fit=crop&q=85' : 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&fit=crop&q=85');
+        var fallbackImg = placeFallback(r);
+        delete detailImg.dataset.fallbackDone;
+        detailImg.dataset.fallback = fallbackImg;
         detailImg.src = r.imageUrl || fallbackImg;
-        
+
         // Distance badge
         var distBadge = document.getElementById('detail-distance');
         if (userLatLng && r.latitude && r.longitude) {
@@ -826,23 +915,24 @@
         var listEl = document.getElementById('restaurant-list');
         listEl.innerHTML = '';
         if (list.length === 0) {
-            var icon = activeCategoryFilter === 'hotel' ? '🏨' : (activeCategoryFilter === 'cafe' ? '☕' : '🍴');
-            var name = activeCategoryFilter === 'hotel' ? 'khách sạn' : (activeCategoryFilter === 'cafe' ? 'quán cafe' : (activeCategoryFilter === 'restaurant' ? 'nhà hàng' : 'địa điểm'));
-            listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">' + icon + '</div>'+
-                '<div class="empty-state-title">Không tìm thấy ' + name + ' nào</div>'+
+            listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div>'+
+                '<div class="empty-state-title">Không tìm thấy địa điểm nào</div>'+
                 '<div class="empty-state-desc">Thử thay đổi bộ lọc hoặc từ khoá khác</div></div>';
-            document.getElementById('count-text').textContent = '0 ' + name;
+            document.getElementById('count-text').textContent = '0 địa điểm';
             document.getElementById('count-badge').textContent = '0';
             return;
         }
-        
-        list.forEach(function(r) { 
-            var actualIdx = allPlaces.indexOf(r);
-            listEl.innerHTML += buildCard(r, actualIdx); 
-        });
-        
-        var categoryName = activeCategoryFilter === 'hotel' ? ' khách sạn' : (activeCategoryFilter === 'cafe' ? ' quán cafe' : (activeCategoryFilter === 'restaurant' ? ' nhà hàng' : ' địa điểm'));
-        document.getElementById('count-text').textContent = list.length + categoryName;
+
+        var RENDER_CAP = 80;
+        var toRender = list.length > RENDER_CAP ? list.slice(0, RENDER_CAP) : list;
+        var html = '';
+        toRender.forEach(function(r) { html += buildCard(r, r._idx); });
+        if (list.length > RENDER_CAP) {
+            html += '<div style="text-align:center;color:#64748b;font-size:0.78rem;padding:10px 8px;">Hiển thị '+RENDER_CAP+' / '+list.length+' kết quả — dùng bộ lọc để thu hẹp</div>';
+        }
+        listEl.innerHTML = html;
+
+        document.getElementById('count-text').textContent = list.length + ' địa điểm';
         document.getElementById('count-badge').textContent = list.length;
         
         listEl.querySelectorAll('.restaurant-item').forEach(function(el) {
@@ -863,6 +953,21 @@
     }
 
     // ── UNIFIED FILTER + SORT PIPELINE ──
+    // ── Description search scoring ──
+    function scorePlace(r, terms) {
+        if (!terms || terms.length === 0) return 1;
+        var corpus = [
+            r.name        || '',
+            r.address     || '',
+            r.description || ''
+        ].join(' ').toLowerCase();
+        var score = 0;
+        for (var i = 0; i < terms.length; i++) {
+            if (corpus.includes(terms[i])) score++;
+        }
+        return score;
+    }
+
     function applyFilters() {
         var q = (document.getElementById('search-input').value || '').trim().toLowerCase();
         
@@ -874,64 +979,80 @@
             clearBtn.style.display = 'none';
         }
 
-        // 1. Filter: category + text + price
-        var filtered = allPlaces.filter(function(r, i) {
-            var catOk = (activeCategoryFilter === 'all') || 
-                        (activeCategoryFilter === 'cafe' && r.itemType === 'restaurant' && r.isCafe) ||
-                        (activeCategoryFilter === 'restaurant' && r.itemType === 'restaurant' && !r.isCafe) ||
-                        (activeCategoryFilter === 'hotel' && r.itemType === 'hotel');
-            
+        // 1. Filter: category + text + price + description score
+        var scored = [];
+        allPlaces.forEach(function(r, i) {
+            var catOk = activeCategoryFilters.size === 0 ||
+                        (activeCategoryFilters.has('restaurant') ? r.isRestaurant : true) &&
+                        (activeCategoryFilters.has('cafe')       ? r.isCafe       : true) &&
+                        (activeCategoryFilters.has('hotel')      ? r.isHotel      : true);
+
             var textOk = !q ||
-                (r.name        && r.name.toLowerCase().includes(q)) ||
-                (r.address     && r.address.toLowerCase().includes(q)) ||
-                (r.description && r.description.toLowerCase().includes(q));
-                
-            var priceOk = matchPrice(r, activePriceFilter);
-            
-            var pass = catOk && textOk && priceOk;
-            if (markers[i]) { 
+                (r.name    && r.name.toLowerCase().includes(q)) ||
+                (r.address && r.address.toLowerCase().includes(q));
+
+            var priceOk = matchPrice(r);
+
+            var descScore = descTerms.length > 0 ? scorePlace(r, descTerms) : 1;
+            var descOk = descTerms.length === 0 || descScore > 0;
+
+            var pass = catOk && textOk && priceOk && descOk;
+            if (markers[i]) {
                 if (pass) {
                     if (!markerClusterGroup.hasLayer(markers[i])) markerClusterGroup.addLayer(markers[i]);
                 } else {
                     if (markerClusterGroup.hasLayer(markers[i])) markerClusterGroup.removeLayer(markers[i]);
                 }
             }
-            return pass;
+            if (pass) scored.push({ r: r, score: descScore });
         });
 
-        // 2. Auto-sort nearest first when location is known
-        if (userLatLng) {
-            filtered = filtered.slice().sort(function(a, b) {
-                var da = (a.latitude && a.longitude)
-                    ? calcDistance(userLatLng.lat, userLatLng.lng, a.latitude, a.longitude) : 9999;
-                var db = (b.latitude && b.longitude)
-                    ? calcDistance(userLatLng.lat, userLatLng.lng, b.latitude, b.longitude) : 9999;
+        // 2. Sort: desc search → by relevance score; location known → by distance; else default
+        var filtered;
+        if (descTerms.length > 0) {
+            scored.sort(function(a, b) { return b.score - a.score; });
+            filtered = scored.map(function(x) { return x.r; });
+        } else if (userLatLng) {
+            filtered = scored.map(function(x) { return x.r; }).sort(function(a, b) {
+                var da = (a.latitude && a.longitude) ? calcDistance(userLatLng.lat, userLatLng.lng, a.latitude, a.longitude) : 9999;
+                var db = (b.latitude && b.longitude) ? calcDistance(userLatLng.lat, userLatLng.lng, b.latitude, b.longitude) : 9999;
                 return da - db;
             });
+        } else {
+            filtered = scored.map(function(x) { return x.r; });
+        }
+
+        // 3. Update hint
+        var hint = document.getElementById('desc-search-hint');
+        if (descTerms.length > 0) {
+            hint.style.display = '';
+            hint.innerHTML = 'Tìm thấy <b>' + filtered.length + '</b> địa điểm khớp — sắp xếp theo độ phù hợp';
+        } else {
+            hint.style.display = 'none';
         }
 
         render(filtered);
     }
 
-    // ── Build map markers (add to cluster group) ──
+    // ── Build map markers (bulk add to cluster group) ──
+    var markersToAdd = [];
     allPlaces.forEach(function(r, i) {
         if (!r.latitude || !r.longitude) return;
-        var m = L.marker([r.latitude, r.longitude], {icon: makeIcon(r, false)})
-            .bindPopup(buildPopup(r), {maxWidth: 240});
-            
-        m.on('click', function() { 
+        var m = L.marker([r.latitude, r.longitude], {icon: makeIcon(r, false)});
+
+        m.on('click', function() {
+            if (!m.getPopup()) m.bindPopup(buildPopup(r), {maxWidth: 240});
             showPlaceDetail(r, i);
         });
-        
-        m.on('popupclose', function() { 
+
+        m.on('popupclose', function() {
             var detailView = document.getElementById('sidebar-detail-view');
-            if (detailView.style.display === 'none' && activeIdx === i) {
-                setActive(-1); 
-            }
+            if (detailView.style.display === 'none' && activeIdx === i) setActive(-1);
         });
         markers[i] = m;
-        markerClusterGroup.addLayer(m); // Thêm vào cluster thay vì trực tiếp vào map
+        markersToAdd.push(m);
     });
+    markerClusterGroup.addLayers(markersToAdd);
 
     applyFilters();
 
@@ -945,23 +1066,77 @@
         document.getElementById('search-input').focus();
     });
 
-    // ── Category chip buttons ──
+    // ── Category chip buttons (multi-select) ──
     document.getElementById('category-chips').addEventListener('click', function(e) {
         var chip = e.target.closest('.price-chip');
         if (!chip) return;
-        document.querySelectorAll('#category-chips .price-chip').forEach(function(c) { c.classList.remove('active'); });
-        chip.classList.add('active');
-        activeCategoryFilter = chip.dataset.category;
+        var cat = chip.dataset.category;
+        if (cat === 'all') {
+            activeCategoryFilters.clear();
+        } else {
+            if (activeCategoryFilters.has(cat)) {
+                activeCategoryFilters.delete(cat);
+            } else {
+                activeCategoryFilters.add(cat);
+            }
+        }
+        // sync active class
+        document.querySelectorAll('#category-chips .price-chip').forEach(function(c) {
+            var k = c.dataset.category;
+            if (k === 'all') {
+                c.classList.toggle('active', activeCategoryFilters.size === 0);
+            } else {
+                c.classList.toggle('active', activeCategoryFilters.has(k));
+            }
+        });
         applyFilters();
     });
 
-    // ── Price chip buttons ──
-    document.getElementById('price-chips').addEventListener('click', function(e) {
-        var chip = e.target.closest('.price-chip');
-        if (!chip) return;
-        document.querySelectorAll('#price-chips .price-chip').forEach(function(c) { c.classList.remove('active'); });
-        chip.classList.add('active');
-        activePriceFilter = chip.dataset.price;
+    // ── Price input handlers ──
+    var priceMinEl  = document.getElementById('price-min-input');
+    var priceMaxEl  = document.getElementById('price-max-input');
+    var priceResetEl = document.getElementById('price-input-reset');
+    var priceDebounce = null;
+    function onPriceInput() {
+        clearTimeout(priceDebounce);
+        priceDebounce = setTimeout(function() {
+            priceSliderMin = (parseInt(priceMinEl.value, 10) || 0) * 1000;
+            priceSliderMax = (parseInt(priceMaxEl.value, 10) || 0) * 1000;
+            priceResetEl.style.display = (priceSliderMin > 0 || priceSliderMax > 0) ? '' : 'none';
+            applyFilters();
+        }, 350);
+    }
+    priceMinEl.addEventListener('input', onPriceInput);
+    priceMaxEl.addEventListener('input', onPriceInput);
+    priceResetEl.addEventListener('click', function() {
+        priceMinEl.value = '';
+        priceMaxEl.value = '';
+        priceSliderMin = 0;
+        priceSliderMax = 0;
+        priceResetEl.style.display = 'none';
+        applyFilters();
+    });
+
+    // ── Description search input ──
+    var descInput = document.getElementById('desc-search-input');
+    var descClear = document.getElementById('desc-search-clear');
+    var descDebounce = null;
+    descInput.addEventListener('input', function() {
+        clearTimeout(descDebounce);
+        descDebounce = setTimeout(function() {
+            var raw = descInput.value.trim().toLowerCase();
+            descTerms = raw ? raw.split(/\s+/).filter(function(t) {
+                return t.length >= 2 && !STOP_WORDS.has(t);
+            }) : [];
+            descClear.style.display = descTerms.length > 0 ? '' : 'none';
+            applyFilters();
+        }, 300);
+    });
+    descClear.addEventListener('click', function() {
+        descInput.value = '';
+        descTerms = [];
+        descClear.style.display = 'none';
+        document.getElementById('desc-search-hint').style.display = 'none';
         applyFilters();
     });
 
@@ -1019,7 +1194,7 @@
                 renderDealsBannerSection();     // Re-render section bên dưới với sort theo khoảng cách
                 
                 allPlaces.forEach(function(r, i) {
-                    if (markers[i]) markers[i].setPopupContent(buildPopup(r));
+                    if (markers[i] && markers[i].getPopup()) markers[i].setPopupContent(buildPopup(r));
                 });
 
                 showToast('🎯 Đã định vị thành công! Đang ưu tiên địa điểm gần bạn.', 'success');
@@ -1180,11 +1355,11 @@
                     var d = calcDistance(userLatLng.lat, userLatLng.lng, r.latitude, r.longitude);
                     distBadge = '<span class="fc-dist-badge">📍 '+formatDistance(d)+'</span>';
                 }
-                var label = r.itemType === 'hotel' ? '🏨 Khách sạn' : (r.isCafe ? '☕ Quán Cafe' : '🍴 Nhà hàng');
+                var label = r.isHotel ? '🏨 Khách sạn' : (r.isRestaurant ? '🍴 Nhà hàng' : '☕ Quán Cafe');
                 return '<div class="fc-slide'+(i === activeIdx ? ' active' : '')+'" data-index="'+i+'" onclick="window.triggerDetailView('+allPlaces.indexOf(r)+')">'+
-                    '<img src="'+r.bannerUrl+'" alt="'+r.name+'" class="fc-img" />'+
+                    '<img src="'+escapeHtml(r.bannerUrl)+'" alt="'+escapeHtml(r.name)+'" class="fc-img" />'+
                     '<div class="fc-caption">'+
-                        '<div class="fc-caption-name">'+r.name+' ('+label+')'+distBadge+'</div>'+
+                        '<div class="fc-caption-name">'+escapeHtml(r.name)+' ('+label+')'+distBadge+'</div>'+
                     '</div>'+
                 '</div>';
             }).join('');
@@ -1307,14 +1482,13 @@
                 var d = calcDistance(userLatLng.lat, userLatLng.lng, r.latitude, r.longitude);
                 distHtml = '<div class="deal-banner-dist">📍 '+formatDistance(d)+'</div>';
             }
-            var controller = r.itemType === 'hotel' ? 'Hotel' : 'Restaurant';
-            html += '<a class="deal-banner-card" href="/'+controller+'/Details/'+r.id+'">'+
+            html += '<a class="deal-banner-card" href="/Place/Details/'+r.id+'">'+
                         '<div class="deal-banner-img-wrap">'+
-                            '<img src="'+r.bannerUrl+'" alt="'+r.name+'" />'+
+                            '<img src="'+escapeHtml(r.bannerUrl)+'" alt="'+escapeHtml(r.name)+'" />'+
                             '<div class="deal-banner-overlay"></div>'+
                         '</div>'+
                         '<div class="deal-banner-info">'+
-                            '<div class="deal-banner-name">'+r.name+'</div>'+
+                            '<div class="deal-banner-name">'+escapeHtml(r.name)+'</div>'+
                             distHtml+
                         '</div>'+
                     '</a>';

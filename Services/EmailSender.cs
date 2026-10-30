@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -39,7 +40,7 @@ namespace DACS.Services
                     }
                     else
                     {
-                        _logger.LogWarning("BrevoApiKey chưa được cấu hình. Lưu email ra file HTML.");
+                        _logger.LogWarning("BrevoApiKey chưa được cấu hình. Không gửi được email.");
                         await WriteEmailToLocalHtmlAsync(email, subject, htmlMessage);
                     }
                 }
@@ -87,11 +88,22 @@ namespace DACS.Services
             }
         }
 
+        /// <summary>
+        /// Lưu email ra file khi không gửi được — CHỈ ở môi trường Development, để dev xem OTP/link.
+        /// File nằm trong App_Data (ngoài wwwroot) nên không bị phục vụ công khai qua web.
+        /// Production không lưu nội dung (có OTP, link reset mật khẩu), chỉ ghi log lỗi.
+        /// </summary>
         private async Task WriteEmailToLocalHtmlAsync(string email, string subject, string htmlMessage)
         {
+            if (!_env.IsDevelopment())
+            {
+                _logger.LogError("Không gửi được email tới {Email} (subject: {Subject}). Kiểm tra cấu hình BrevoApiKey.", email, subject);
+                return;
+            }
+
             try
             {
-                var emailDir = Path.Combine(_env.WebRootPath, "sent_emails");
+                var emailDir = Path.Combine(_env.ContentRootPath, "App_Data", "sent_emails");
                 Directory.CreateDirectory(emailDir);
 
                 var fileName = $"email-{Guid.NewGuid()}.html";
@@ -99,10 +111,10 @@ namespace DACS.Services
 
                 var content = $@"<!DOCTYPE html>
 <html lang=""vi"">
-<head><meta charset=""utf-8""/><title>{subject}</title></head>
+<head><meta charset=""utf-8""/><title>{WebUtility.HtmlEncode(subject)}</title></head>
 <body>
-<p><strong>To:</strong> {email}</p>
-<p><strong>Subject:</strong> {subject}</p>
+<p><strong>To:</strong> {WebUtility.HtmlEncode(email)}</p>
+<p><strong>Subject:</strong> {WebUtility.HtmlEncode(subject)}</p>
 <p><strong>Sent At:</strong> {DateTime.Now:dd/MM/yyyy HH:mm:ss}</p>
 <hr/>
 {htmlMessage}
@@ -110,7 +122,7 @@ namespace DACS.Services
 </html>";
 
                 await File.WriteAllTextAsync(filePath, content);
-                _logger.LogWarning("[EMAIL FALLBACK] Lưu email tới {Email} tại /sent_emails/{FileName}", email, fileName);
+                _logger.LogWarning("[EMAIL FALLBACK][DEV] Lưu email tới {Email} tại {FilePath}", email, filePath);
             }
             catch (Exception ex)
             {

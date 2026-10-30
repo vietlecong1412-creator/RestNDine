@@ -21,11 +21,13 @@ namespace DACS.Areas.Identity.Pages.Account
     {
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly ILogger<LoginModel> _logger;
+        private readonly DACS.Services.OtpService _otpService;
 
-        public LoginModel(SignInManager<IdentityUser> signInManager, ILogger<LoginModel> logger)
+        public LoginModel(SignInManager<IdentityUser> signInManager, ILogger<LoginModel> logger, DACS.Services.OtpService otpService)
         {
             _signInManager = signInManager;
             _logger = logger;
+            _otpService = otpService;
         }
 
         /// <summary>
@@ -124,6 +126,18 @@ namespace DACS.Areas.Identity.Pages.Account
                 {
                     _logger.LogWarning("User account locked out.");
                     return RedirectToPage("./Lockout");
+                }
+                if (result.IsNotAllowed)
+                {
+                    // Email chưa xác thực: mật khẩu đúng thì gửi OTP và chuyển sang trang nhập mã
+                    var user = await _signInManager.UserManager.FindByEmailAsync(Input.Email);
+                    if (user != null && await _otpService.HandleUnconfirmedLoginAsync(user, Input.Password))
+                    {
+                        TempData["Success"] = "Tài khoản chưa xác thực email. Vui lòng nhập mã OTP đã gửi tới hòm thư của bạn.";
+                        return RedirectToPage("./VerifyOtp", new { userId = user.Id, email = user.Email });
+                    }
+                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                    return Page();
                 }
                 else
                 {

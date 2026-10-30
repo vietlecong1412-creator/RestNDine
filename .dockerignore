@@ -6,3 +6,6 @@ comments_dataset.csv
 .vscode/
 *.user
 appsettings.Development.json
+
+App_Data/
+restndine_app/

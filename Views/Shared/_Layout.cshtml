@@ -12,6 +12,16 @@
                 document.documentElement.classList.add('dark-theme');
             }
         })();
+
+        // Link ảnh Google Maps cào về có thể hết hạn: thay bằng ảnh minh hoạ thay vì để ảnh hỏng.
+        // Đặt trong <head> để bắt được cả ảnh lỗi trước khi trang tải xong.
+        document.addEventListener('error', function (e) {
+            var img = e.target;
+            if (!img || img.tagName !== 'IMG' || img.dataset.fallbackDone) return;
+            if (!img.dataset.fallback && img.src.indexOf('googleusercontent.com') < 0) return;
+            img.dataset.fallbackDone = '1';
+            img.src = img.dataset.fallback || '/images/fallback/restaurant-1.jpg';
+        }, true);
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

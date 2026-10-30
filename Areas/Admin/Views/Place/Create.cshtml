@@ -25,10 +25,16 @@
                     </div>
 
                     <div class="mb-4">
-                        <label asp-for="CategoryId" class="form-label-custom">Loại hình *</label>
-                        <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-control-custom" id="categorySelect">
-                            <option value="">-- Chọn loại --</option>
-                        </select>
+                        <label class="form-label-custom">Loại hình * <small class="text-muted">(chọn một hoặc nhiều)</small></label>
+                        <div class="category-checkbox-group">
+                            @foreach (var cat in (List<DACS.Models.PlaceCategory>)ViewBag.AllCategories)
+                            {
+                                <label class="category-checkbox-item">
+                                    <input type="checkbox" name="selectedCategoryIds" value="@cat.Id" />
+                                    <span>@cat.Icon @cat.Name</span>
+                                </label>
+                            }
+                        </div>
                     </div>
 
                     <div class="mb-4">
@@ -81,7 +87,7 @@
 
                     <div class="mb-4">
                         <label class="form-label-custom">Hình ảnh đại diện</label>
-                        <input type="file" name="image" id="imageInput" class="form-control-custom" accept="image/*" />
+                        <input type="file" name="image" id="imageInput" class="form-control-custom" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" />
                         <div class="mt-2 text-center" style="display:none;" id="imagePreviewContainer">
                             <img id="imagePreview" src="" alt="Preview"
                                  style="max-width:100%;height:auto;border-radius:10px;max-height:200px;object-fit:cover;border:1px solid var(--border);" />
@@ -111,16 +117,21 @@
 <partial name="_ValidationScriptsPartial" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    var categorySelect = document.getElementById('categorySelect');
-    var hotelFields = document.getElementById('hotelFields');
     function updateFields() {
-        var t = categorySelect.options[categorySelect.selectedIndex]?.text?.toLowerCase() ?? '';
-        hotelFields.style.display = (t.includes('khách sạn') || t.includes('hotel')) ? 'block' : 'none';
+        var checked = Array.from(document.querySelectorAll('input[name="selectedCategoryIds"]:checked'));
+        var hasHotel = checked.some(function(cb) {
+            var text = cb.closest('label').textContent.toLowerCase();
+            return text.includes('khách sạn') || text.includes('hotel');
+        });
+        document.getElementById('hotelFields').style.display = hasHotel ? 'block' : 'none';
     }
-    categorySelect.addEventListener('change', updateFields);
+    document.querySelectorAll('input[name="selectedCategoryIds"]').forEach(function(cb) {
+        cb.addEventListener('change', updateFields);
+    });
+    updateFields();
 
     var map = L.map('mini-map').setView([10.8231, 106.6297], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution: 'Tiles &copy; Esri',maxZoom:19}).addTo(map);
     setTimeout(function(){map.invalidateSize();},500);
     new ResizeObserver(function(){map.invalidateSize();}).observe(document.getElementById('mini-map'));
 

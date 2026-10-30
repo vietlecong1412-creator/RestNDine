@@ -1,4 +1,5 @@
 using DACS.Data;
+using DACS.Helpers;
 using DACS.Models;
 using DACS.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -41,34 +42,38 @@ namespace DACS.Areas.Admin.Controllers
 
         public async Task<IActionResult> Create()
         {
-            ViewBag.Categories = new SelectList(
-                await _context.PlaceCategories.ToListAsync(), "Id", "Name");
+            ViewBag.AllCategories = await _context.PlaceCategories.ToListAsync();
             return View();
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(Place place, IFormFile? image)
+        public async Task<IActionResult> Create(Place place, int[] selectedCategoryIds, IFormFile? image)
         {
+            ModelState.Remove("Categories");
+            bool hasImage = image != null && image.Length > 0;
+            if (hasImage && await ImageUpload.ValidateAsync(image) is string imageError)
+                ModelState.AddModelError(string.Empty, imageError);
+
             if (ModelState.IsValid)
             {
-                if (image != null && image.Length > 0)
+                if (hasImage)
+                    place.ImageUrl = await ImageUpload.SaveAsync(image!, "places");
+
+                if (selectedCategoryIds.Length > 0)
                 {
-                    var fileExtension = Path.GetExtension(image.FileName);
-                    var newFileName = Guid.NewGuid().ToString() + fileExtension;
-                    var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "places");
-                    if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                    var path = Path.Combine(dir, newFileName);
-                    using (var stream = new FileStream(path, FileMode.Create))
-                        await image.CopyToAsync(stream);
-                    place.ImageUrl = $"/images/places/{newFileName}";
+                    var categories = await _context.PlaceCategories
+                        .Where(c => selectedCategoryIds.Contains(c.Id))
+                        .ToListAsync();
+                    foreach (var cat in categories)
+                        place.Categories.Add(cat);
                 }
 
                 await _repo.AddAsync(place);
                 return RedirectToAction("Index");
             }
 
-            ViewBag.Categories = new SelectList(
-                await _context.PlaceCategories.ToListAsync(), "Id", "Name", place.CategoryId);
+            ViewBag.AllCategories = await _context.PlaceCategories.ToListAsync();
+            ViewBag.SelectedCategoryIds = selectedCategoryIds;
             return View(place);
         }
 
@@ -93,11 +98,12 @@ namespace DACS.Areas.Admin.Controllers
         // GET: /Admin/Place/BannerRequests
         public async Task<IActionResult> BannerRequests()
         {
-            var all = await _repo.GetAllAsync();
-            var pending = all
+            var pending = await _context.Places
+                .AsNoTracking()
+                .Include(p => p.Categories)
                 .Where(p => p.BannerStatus == BannerStatus.PendingPayment)
                 .OrderByDescending(p => p.Id)
-                .ToList();
+                .ToListAsync();
             return View(pending);
         }
 

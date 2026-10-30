@@ -5,10 +5,12 @@
     ViewData["Title"] = Model.Name;
     Layout = "~/Views/Shared/_Layout.cshtml";
     var currentUser = await UserManager.GetUserAsync(User);
-    var categorySlug = Model.Category?.Slug ?? "restaurant";
-    var categoryIcon = Model.Category?.Icon ?? "📍";
-    var categoryName = Model.Category?.Name ?? "Địa điểm";
-    bool isHotel = categorySlug == "hotel";
+    var categorySlugs = Model.Categories.Select(c => c.Slug).ToList();
+    var categoryIcon = Model.Categories.FirstOrDefault()?.Icon ?? "📍";
+    var categoryName = Model.Categories.Any()
+        ? string.Join(" · ", Model.Categories.Select(c => c.Icon + " " + c.Name))
+        : "📍 Địa điểm";
+    bool isHotel = categorySlugs.Contains("hotel");
 }
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -33,6 +35,9 @@
                     var slides = new System.Collections.Generic.List<(string Url, int? ImageId)>();
                     if (!string.IsNullOrEmpty(Model.ImageUrl)) slides.Add((Model.ImageUrl, null));
                     foreach (var gi in Model.Images) slides.Add((gi.ImageUrl, gi.Id));
+                    // Không có ảnh thì dùng ảnh minh hoạ; ảnh nền xếp 2 lớp để link hết hạn vẫn còn ảnh minh hoạ bên dưới
+                    var fallbackImage = DACS.Helpers.PlaceFallbackImage.Url(Model);
+                    if (slides.Count == 0) slides.Add((fallbackImage, null));
                     bool isOwnerOrAdmin = User.Identity!.IsAuthenticated &&
                         (Model.OwnerId == currentUser?.Id || User.IsInRole("Admin"));
                 }
@@ -52,7 +57,7 @@
                             @for (int i = 0; i < slides.Count; i++)
                             {
                                 <div class="slider-slide @(i == 0 ? "active" : "")" data-index="@i"
-                                     style="background-image:url('@slides[i].Url')">
+                                     style="background-image:url('@slides[i].Url'),url('@fallbackImage')">
                                     <div class="hero-overlay"></div>
                                     @if (isOwnerOrAdmin && slides[i].ImageId != null)
                                     {
@@ -89,7 +94,7 @@
                                 <label for="sliderImageInput" class="slider-add-btn" title="Thêm ảnh">
                                     <span>＋</span>
                                 </label>
-                                <input type="file" id="sliderImageInput" name="image" accept="image/*"
+                                <input type="file" id="sliderImageInput" name="image" accept="image/jpeg,image/png,image/gif,image/webp,image/avif"
                                        class="d-none" onchange="document.getElementById('addImageForm').submit()" />
                             </form>
                         </div>
@@ -157,20 +162,6 @@
             </div>
 
             @* ── AI Summary Widget ── *@
-            @{
-                string FormatMarkdown(string txt)
-                {
-                    if (string.IsNullOrEmpty(txt)) return "";
-                    var parts = txt.Split("**");
-                    var sb = new System.Text.StringBuilder();
-                    for (int i = 0; i < parts.Length; i++)
-                    {
-                        if (i % 2 == 1) sb.Append("<strong>" + parts[i] + "</strong>");
-                        else sb.Append(parts[i]);
-                    }
-                    return sb.ToString().Replace("\n", "<br/>");
-                }
-            }
             <div class="card-glass-ai p-4 p-md-5 mb-4 position-relative overflow-hidden">
                 <div style="position:absolute;top:-50px;right:-50px;width:200px;height:200px;background:radial-gradient(circle,rgba(249,115,22,.15) 0%,transparent 70%);filter:blur(30px);pointer-events:none;"></div>
                 <div class="d-flex align-items-center gap-3 mb-4">
@@ -183,7 +174,7 @@
                 <div class="ai-summary-content">
                     @if (ViewBag.AiSummary != null) 
                     { 
-                        @Html.Raw(FormatMarkdown((string)ViewBag.AiSummary)) 
+                        @Html.Raw(DACS.Helpers.SafeMarkdown.ToHtml((string)ViewBag.AiSummary))
                     }
                     else 
                     { 
@@ -196,9 +187,18 @@
                         </div>
                     }
                 </div>
+                <div id="ai-chart-wrapper" style="display:none; margin-top:1.25rem;">
+                    <div class="text-center mb-1">
+                        <span class="text-muted small fw-semibold">📊 Phân bố cảm xúc bình luận</span>
+                    </div>
+                    <div id="ai-sentiment-chart" style="height:260px;width:100%;"></div>
+                </div>
                 <div class="mt-4 pt-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-top-color:var(--border)!important;">
                     <span class="text-muted small">⚡ Phân tích bằng mô hình NLP 100% Cục bộ & Bảo mật</span>
-                    <button id="btn-reanalyze-ai" class="btn btn-sm btn-outline-custom" style="font-size:.72rem;border-radius:20px;padding:4px 12px;" onclick="loadAiSummary(true);">🔄 Phân tích lại</button>
+                    @if (DACS.Helpers.PlaceAccess.CanManage(Model, User))
+                    {
+                        <button id="btn-reanalyze-ai" class="btn btn-sm btn-outline-custom" style="font-size:.72rem;border-radius:20px;padding:4px 12px;" onclick="loadAiSummary(true);">🔄 Phân tích lại</button>
+                    }
                 </div>
             </div>
             
@@ -336,6 +336,13 @@
                         var qi_avg   = qi_rated.Any() ? qi_rated.Average(c => c.Rating) : 0;
                     }
                     <div class="quick-info-row">
+                        <span class="qi-icon">🏪</span>
+                        <div class="qi-body">
+                            <span class="qi-label">Tên địa điểm</span>
+                            <span class="qi-value fw-bold">@Model.Name</span>
+                        </div>
+                    </div>
+                    <div class="quick-info-row">
                         <span class="qi-icon">⭐</span>
                         <div class="qi-body">
                             @if (qi_rated.Any())
@@ -387,6 +394,43 @@
                             </div>
                         </div>
                     }
+                    @if (!string.IsNullOrEmpty(Model.OpeningHours))
+                    {
+                        <div class="quick-info-row">
+                            <span class="qi-icon">🕐</span>
+                            <div class="qi-body">
+                                <span class="qi-label">Giờ mở cửa</span>
+                                <span class="qi-value">@Model.OpeningHours</span>
+                            </div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Website))
+                    {
+                        <div class="quick-info-row">
+                            <span class="qi-icon">🌐</span>
+                            <div class="qi-body">
+                                <span class="qi-label">Website</span>
+                                <a href="@Model.Website" target="_blank" rel="noopener" class="qi-value text-primary">
+                                    @Model.Website
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Tags))
+                    {
+                        <div class="quick-info-row align-items-start">
+                            <span class="qi-icon">🏷️</span>
+                            <div class="qi-body">
+                                <span class="qi-label">Tiện ích</span>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    @foreach (var tag in Model.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                    {
+                                        <span class="badge" style="background:rgba(99,102,241,.12);color:#6366f1;border:1px solid rgba(99,102,241,.25);border-radius:50px;padding:3px 10px;font-size:0.73rem;">@tag</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
                 @if (User.Identity!.IsAuthenticated && (Model.OwnerId == currentUser?.Id || User.IsInRole("Admin")))
                 {
@@ -431,7 +475,7 @@
                                 <label class="small text-muted fw-bold mb-1">
                                     @(string.IsNullOrEmpty(Model.BannerUrl) ? "Tải lên ảnh banner (1200×400 px)" : "Thay đổi ảnh banner khác")
                                 </label>
-                                <input type="file" name="bannerImage" accept="image/*" required class="form-control form-control-sm" style="background:rgba(255,255,255,0.05);border-color:var(--border);color:var(--text-primary);" />
+                                <input type="file" name="bannerImage" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" required class="form-control form-control-sm" style="background:rgba(255,255,255,0.05);border-color:var(--border);color:var(--text-primary);" />
                             </div>
                             <button type="submit" class="btn btn-sm btn-warning w-100 fw-bold" style="color:#1e293b;background:#fbbf24;border:none;padding:.4rem .75rem;border-radius:8px;">
                                 <i class="fa-solid fa-cloud-arrow-up me-1"></i>
@@ -571,8 +615,11 @@
 
     // Sync tile với theme sáng/tối
     var isDark = document.documentElement.classList.contains('dark-theme');
-    var lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
-    var darkTiles  = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
+    var lightTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxNativeZoom: 19, maxZoom: 20 });
+    var darkTiles  = L.layerGroup([
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxNativeZoom: 16, maxZoom: 20 }),
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 20 })
+    ]);
     (isDark ? darkTiles : lightTiles).addTo(map);
     window.addEventListener('theme-changed', function(e) {
         if (e.detail.theme === 'dark') { map.removeLayer(lightTiles); darkTiles.addTo(map); }
@@ -589,7 +636,7 @@
         iconSize: [32, 32], iconAnchor: [16, 32]
     });
     L.marker([placeLat, placeLng], { icon: customIcon }).addTo(map)
-     .bindPopup('<b>@Html.Raw(Model.Name.Replace("'","&#39;"))</b>');
+     .bindPopup(Object.assign(document.createElement('b'), { textContent: @Json.Serialize(Model.Name) }));
 
     // ── OSRM Routing ──────────────────────────────────────────────────────────
     var routeLine  = null;
@@ -902,6 +949,7 @@
             });
         });
     });
+})();
 </script>
 
 <script>
@@ -942,6 +990,7 @@ function loadAiSummary(force) {
     .then(function(data) {
         if (data.success) {
             contentEl.innerHTML = data.html;
+            if (data.chartData) renderSentimentChart(data.chartData);
         } else {
             contentEl.innerHTML = '<span class="text-danger">⚠️ Lỗi: ' + (data.message || 'Không thể tải báo cáo AI.') + '</span>';
         }
@@ -966,6 +1015,68 @@ function loadAiSummary(force) {
         loadAiSummary(false);
     });
     </text>
+}
+@if (ViewBag.ChartPositive != null)
+{
+    <text>
+    document.addEventListener('DOMContentLoaded', function() {
+        renderSentimentChart({
+            positive: @ViewBag.ChartPositive,
+            neutral:  @ViewBag.ChartNeutral,
+            negative: @ViewBag.ChartNegative
+        });
+    });
+    </text>
+}
+</script>
+
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+<script>
+google.charts.load('current', { packages: ['corechart'] });
+
+function renderSentimentChart(chartData) {
+    var wrapper = document.getElementById('ai-chart-wrapper');
+    if (!wrapper) return;
+    var total = (chartData.positive || 0) + (chartData.neutral || 0) + (chartData.negative || 0);
+    if (total === 0) { wrapper.style.display = 'none'; return; }
+    wrapper.style.display = 'block';
+
+    function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+            ['Loại', 'Số lượng'],
+            ['Tích cực (' + chartData.positive + ')',  chartData.positive  || 0],
+            ['Trung lập (' + chartData.neutral  + ')',  chartData.neutral   || 0],
+            ['Tiêu cực (' + chartData.negative  + ')',  chartData.negative  || 0]
+        ]);
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+                  || document.body.classList.contains('dark');
+        var legendColor = isDark ? '#e2e8f0' : '#334155';
+        var options = {
+            is3D: true,
+            colors: ['#22c55e', '#eab308', '#ef4444'],
+            backgroundColor: 'transparent',
+            legend: {
+                textStyle: { color: legendColor, fontSize: 12, bold: true },
+                position: 'right',
+                alignment: 'center'
+            },
+            pieSliceTextStyle: { color: '#fff', bold: true, fontSize: 11 },
+            pieSliceText: 'percentage',
+            chartArea: { left: '0%', top: '5%', width: '65%', height: '90%' },
+            slices: {
+                0: { offset: 0.04 },
+                2: { offset: 0.06 }
+            }
+        };
+        var chart = new google.visualization.PieChart(document.getElementById('ai-sentiment-chart'));
+        chart.draw(data, options);
+    }
+
+    if (window.google && google.visualization) {
+        drawChart();
+    } else {
+        google.charts.setOnLoadCallback(drawChart);
+    }
 }
 </script>
 
