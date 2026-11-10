@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   dio: ^5.11.1
   provider: ^6.1.5+1
@@ -39,6 +41,7 @@ dependencies:
   signalr_netcore: ^1.4.4
   flutter_markdown: ^0.7.7+1
   cached_network_image: ^4.0.4
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +71,24 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/fonts/OFL.txt
+
+  # Plus Jakarta Sans: cùng font với bản web, hỗ trợ đầy đủ dấu tiếng Việt.
+  # Các file tĩnh được tách từ bản variable của Google Fonts (giấy phép OFL).
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
 
   # To add assets to your application, add an assets section, like this:
   # assets:

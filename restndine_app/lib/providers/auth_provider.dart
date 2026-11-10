@@ -6,45 +6,62 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
 
   UserModel? _user;
-  bool _isLoading = true;
+  bool _isRestoring = true;
+  bool _isSubmitting = false;
   String? _errorMessage;
   String? _pendingOtpEmail;
 
   UserModel? get user => _user;
   bool get isAuthenticated => _user != null;
-  bool get isLoading => _isLoading;
+
+  /// Đang khôi phục phiên đăng nhập lúc mở app.
+  bool get isRestoring => _isRestoring;
+
+  /// Đang gửi yêu cầu đăng nhập/đăng ký.
+  bool get isSubmitting => _isSubmitting;
   String? get errorMessage => _errorMessage;
 
   /// Email đang chờ nhập OTP (sau đăng ký, hoặc đăng nhập tài khoản chưa xác thực).
   String? get pendingOtpEmail => _pendingOtpEmail;
 
-  AuthProvider() {
-    checkCurrentUser();
+  AuthProvider({bool restoreSession = true}) {
+    if (restoreSession) {
+      checkCurrentUser();
+    } else {
+      _isRestoring = false;
+    }
   }
 
   Future<void> checkCurrentUser() async {
-    _isLoading = true;
+    _isRestoring = true;
     notifyListeners();
     try {
       _user = await _authService.getCurrentUser();
     } catch (_) {
       _user = null;
     } finally {
-      _isLoading = false;
+      _isRestoring = false;
       notifyListeners();
     }
+  }
+
+  /// Xoá lỗi cũ khi mở lại màn hình đăng nhập/đăng ký.
+  void clearError() {
+    if (_errorMessage == null) return;
+    _errorMessage = null;
+    notifyListeners();
   }
 
   /// Trả về true khi đăng nhập xong. Nếu tài khoản chưa xác thực email,
   /// trả về false và đặt [pendingOtpEmail] để màn hình chuyển sang nhập OTP.
   Future<bool> login(String email, String password) async {
-    _isLoading = true;
+    _isSubmitting = true;
     _errorMessage = null;
     _pendingOtpEmail = null;
     notifyListeners();
 
     final result = await _authService.login(email, password);
-    _isLoading = false;
+    _isSubmitting = false;
 
     if (result['success'] == true) {
       _user = result['user'] as UserModel;
@@ -64,13 +81,13 @@ class AuthProvider extends ChangeNotifier {
   /// Trả về true khi tạo tài khoản thành công; khi đó [pendingOtpEmail] được đặt
   /// và người dùng phải nhập OTP (gọi [verifyOtp]) mới đăng nhập được.
   Future<bool> register(String email, String password, {String role = 'Customer'}) async {
-    _isLoading = true;
+    _isSubmitting = true;
     _errorMessage = null;
     _pendingOtpEmail = null;
     notifyListeners();
 
     final result = await _authService.register(email, password, role: role);
-    _isLoading = false;
+    _isSubmitting = false;
 
     if (result['success'] == true) {
       _pendingOtpEmail = result['email'] as String?;

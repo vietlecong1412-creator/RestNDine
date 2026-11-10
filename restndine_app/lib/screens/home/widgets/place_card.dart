@@ -1,242 +1,252 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/place_model.dart';
+import '../../../widgets/common.dart';
+import '../../../widgets/place_image.dart';
 import '../../place_detail/place_detail_screen.dart';
-import 'place_image.dart';
 
+void openPlaceDetail(BuildContext context, PlaceModel place) {
+  Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => PlaceDetailScreen(placeId: place.id, preview: place)),
+  );
+}
+
+/// Thẻ địa điểm trong danh sách: ảnh lớn, tên, loại, địa chỉ và mức giá.
 class PlaceCard extends StatelessWidget {
   final PlaceModel place;
-  final bool isHorizontal;
 
-  const PlaceCard({
-    super.key,
-    required this.place,
-    this.isHorizontal = false,
-  });
+  const PlaceCard({super.key, required this.place});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => PlaceDetailScreen(placeId: place.id),
-          ),
-        );
-      },
+    final colors = context.colors;
+
+    return PressableScale(
+      onTap: () => openPlaceDetail(context, place),
       child: Container(
-        width: isHorizontal ? 280 : double.infinity,
-        margin: EdgeInsets.only(
-          right: isHorizontal ? 14 : 0,
-          bottom: isHorizontal ? 0 : 16,
-        ),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: colors.card,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: context.isDark ? Border.all(color: colors.border) : null,
+          boxShadow: context.isDark ? null : colors.softShadow,
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image & Badges
             Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  child: AspectRatio(
-                    aspectRatio: isHorizontal ? 16 / 9 : 16 / 8,
-                    child: PlaceImage(place: place),
+                AspectRatio(
+                  aspectRatio: 2 / 1,
+                  child: LayoutBuilder(
+                    builder: (_, c) => PlaceImage(place: place, displayWidth: c.maxWidth),
                   ),
                 ),
-
-                // Sponsored Banner Badge
-                if (place.hasBanner)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFFB703), Color(0xFFFB8500)],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.star, color: Colors.white, size: 13),
-                          SizedBox(width: 4),
-                          Text(
-                            'NỔI BẬT',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                // Star Rating Badge
-                if (place.starRating != null && place.starRating! > 0)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${place.starRating}.0',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                if (place.hasBanner) const Positioned(top: 12, left: 12, child: SponsoredBadge()),
               ],
             ),
-
-            // Place Info Details
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Category chips
-                  if (place.categories.isNotEmpty)
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: place.categories.take(2).map((cat) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '${cat.icon ?? ""} ${cat.name}'.trim(),
-                            style: const TextStyle(
-                              color: AppTheme.primaryColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  const SizedBox(height: 8),
-
-                  // Place Name
                   Text(
                     place.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                    ),
+                    style: context.text.titleMedium!.copyWith(fontSize: 17),
                   ),
-                  const SizedBox(height: 4),
-
-                  // Address
-                  if (place.address != null && place.address!.isNotEmpty)
-                    Row(
-                      children: [
-                        Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade600),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            place.address!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
                   const SizedBox(height: 6),
-
-                  // Price range & AI summary indicator
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (place.priceRange != null && place.priceRange!.isNotEmpty)
-                        Text(
-                          place.priceRange!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.accentColor,
-                          ),
-                        )
-                      else
-                        const SizedBox(),
-
-                      // AI Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.shade50,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.purple.shade200),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.auto_awesome, size: 12, color: Colors.purple.shade700),
-                            const SizedBox(width: 3),
-                            Text(
-                              'AI Analysis',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.purple.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  PlaceMetaLine(place: place),
+                  if (place.address != null) ...[
+                    const SizedBox(height: 5),
+                    PlaceAddressLine(address: place.address!),
+                  ],
+                  if (place.displayPrice != null) ...[
+                    const SizedBox(height: 8),
+                    PlacePriceLine(price: place.displayPrice!),
+                  ],
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Thẻ lớn trong dải "Nổi bật": tên và địa chỉ đặt trên ảnh.
+class FeaturedPlaceCard extends StatelessWidget {
+  final PlaceModel place;
+  final double width;
+
+  const FeaturedPlaceCard({super.key, required this.place, this.width = 272});
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: () => openPlaceDetail(context, place),
+      child: SizedBox(
+        width: width,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              PlaceImage(place: place, displayWidth: width),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.35, 1],
+                    colors: [Colors.transparent, Color(0xD9000000)],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      place.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.titleMedium!.copyWith(color: Colors.white, fontSize: 17),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(place.type.icon, size: 14, color: Colors.white70),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            [place.categoryLabel, place.address].whereType<String>().join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.bodySmall!.copyWith(color: Colors.white70),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dòng phụ: loại địa điểm (kèm hạng sao nếu là khách sạn).
+class PlaceMetaLine extends StatelessWidget {
+  final PlaceModel place;
+
+  const PlaceMetaLine({super.key, required this.place});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final type = place.type;
+    final stars = type == PlaceType.hotel ? (place.starRating ?? 0) : 0;
+    final style = context.text.labelMedium!.copyWith(color: colors.textSecondary);
+
+    return Row(
+      children: [
+        Icon(type.icon, size: 16, color: type.color(colors)),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(place.categoryLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+        ),
+        if (stars > 0) ...[
+          Text('  ·  ', style: style.copyWith(color: colors.textMuted)),
+          RatingStars(rating: stars.toDouble(), size: 14),
+        ],
+      ],
+    );
+  }
+}
+
+class PlaceAddressLine extends StatelessWidget {
+  final String address;
+
+  const PlaceAddressLine({super.key, required this.address});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.location_on_outlined, size: 16, color: context.colors.textMuted),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(address, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.bodySmall),
+        ),
+      ],
+    );
+  }
+}
+
+class PlacePriceLine extends StatelessWidget {
+  final String price;
+
+  const PlacePriceLine({super.key, required this.price});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.colors.success;
+    return Row(
+      children: [
+        Icon(Icons.payments_outlined, size: 16, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            price,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.labelMedium!.copyWith(color: color, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Khung xương của [PlaceCard] khi đang tải.
+class PlaceCardSkeleton extends StatelessWidget {
+  const PlaceCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(aspectRatio: 2 / 1, child: SkeletonBox(height: double.infinity, radius: 0)),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 190, height: 16),
+                SizedBox(height: 10),
+                SkeletonBox(width: 140, height: 12),
+                SizedBox(height: 10),
+                SkeletonBox(width: 230, height: 12),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
