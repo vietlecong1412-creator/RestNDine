@@ -284,11 +284,12 @@
                         @foreach (var c in Model.Comments.OrderByDescending(x => x.CreatedAt))
                         {
                             var hasVoted = votedIds.Contains(c.Id);
+                            var authorName = DACS.Helpers.UserDisplay.Name(c.User);
                             <div class="comment-item">
-                                <div class="comment-avatar">@(c.User?.Email?.Substring(0, 1).ToUpper() ?? "U")</div>
+                                <div class="comment-avatar">@authorName.Substring(0, 1).ToUpper()</div>
                                 <div class="comment-body">
                                     <div class="comment-header">
-                                        <span class="comment-user">@c.User?.Email</span>
+                                        <span class="comment-user">@authorName</span>
                                         <span class="comment-date">@c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
                                     </div>
                                     <div class="comment-stars mb-1">

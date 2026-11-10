@@ -54,6 +54,14 @@ void main() {
     });
   });
 
+  test('bình luận hiện tên server trả về, không có thì phần trước @', () {
+    PlaceCommentModel comment(Map<String, dynamic> extra) =>
+        PlaceCommentModel.fromJson({'id': 1, 'content': 'x', 'rating': 5, 'userEmail': 'lan.tran@gmail.com', ...extra});
+    expect(comment({'userName': 'Trần Thị Lan'}).authorName, 'Trần Thị Lan');
+    expect(comment({}).authorName, 'lan.tran');
+    expect(initialsOf('Trần Thị Lan'), 'TT');
+  });
+
   test('tên hiển thị không lộ email', () {
     expect(displayNameFromEmail('minh.nguyen@gmail.com'), 'minh.nguyen');
     expect(initialsOf('minh.nguyen'), 'MN');
