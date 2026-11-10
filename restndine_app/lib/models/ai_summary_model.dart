@@ -1,3 +1,5 @@
+import '../utils/formatters.dart';
+
 class SentimentStats {
   final int positive;
   final int neutral;
@@ -45,7 +47,7 @@ class AiSummaryModel {
       success: json['success'] ?? false,
       summary: json['summary'] ?? '',
       isCached: json['isCached'] ?? false,
-      updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
+      updatedAt: parseServerDate(json['updatedAt']),
       sentimentStats: json['sentimentStats'] != null
           ? SentimentStats.fromJson(json['sentimentStats'] as Map<String, dynamic>)
           : null,

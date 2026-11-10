@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common.dart';
+import 'auth_widgets.dart';
 
 /// Nhập mã OTP 6 số được gửi qua email để xác thực tài khoản.
 /// Thành công → đã đăng nhập, màn hình đóng lại với kết quả `true`.
@@ -19,10 +21,12 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> {
   static const _resendCooldown = 60;
+  static const _length = 6;
 
-  final _formKey = GlobalKey<FormState>();
   final _codeCtrl = TextEditingController();
+  final _focus = FocusNode();
   bool _submitting = false;
+  bool _resending = false;
   String? _errorMessage;
   int _resendWait = _resendCooldown; // server vừa gửi mã khi đăng ký/đăng nhập
   Timer? _timer;
@@ -37,6 +41,7 @@ class _OtpScreenState extends State<OtpScreen> {
   void dispose() {
     _timer?.cancel();
     _codeCtrl.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -50,46 +55,49 @@ class _OtpScreenState extends State<OtpScreen> {
     });
   }
 
-  void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _submit() async {
+    if (_submitting) return;
+    if (_codeCtrl.text.length != _length) {
+      setState(() => _errorMessage = 'Mã OTP gồm đúng 6 chữ số.');
+      return;
+    }
 
     setState(() {
       _submitting = true;
       _errorMessage = null;
     });
 
-    final error = await context.read<AuthProvider>().verifyOtp(widget.email, _codeCtrl.text.trim());
+    final error = await context.read<AuthProvider>().verifyOtp(widget.email, _codeCtrl.text);
     if (!mounted) return;
 
     if (error == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Xác thực thành công! Chào mừng bạn đến với RestNDine.'),
-          backgroundColor: AppTheme.accentColor,
-        ),
-      );
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.of(context).pop(true);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Xác thực thành công! Chào mừng bạn đến với RestNDine.')),
+      );
     } else {
       setState(() {
         _submitting = false;
         _errorMessage = error;
       });
+      _codeCtrl.clear();
+      _focus.requestFocus();
     }
   }
 
-  void _resend() async {
+  Future<void> _resend() async {
+    setState(() => _resending = true);
     final result = await context.read<AuthProvider>().resendOtp(widget.email);
     if (!mounted) return;
+    setState(() => _resending = false);
 
     if (result['success'] == true) {
       _codeCtrl.clear();
       setState(() => _errorMessage = null);
       _startCountdown(_resendCooldown);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã gửi lại mã OTP mới vào email của bạn.'),
-          backgroundColor: AppTheme.accentColor,
-        ),
+        const SnackBar(content: Text('Đã gửi mã mới. Kiểm tra hộp thư (cả mục Spam) nhé.')),
       );
     } else {
       final retry = result['retryAfterSeconds'];
@@ -100,145 +108,174 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.of(context).pop(false),
-        ),
-      ),
+      appBar: AppBar(),
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.mark_email_read_outlined,
-                    color: AppTheme.primaryColor,
-                    size: 36,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Xác thực email',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
-                    letterSpacing: -0.5,
+          padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AuthHeader(
+                leading: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: context.scheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Icon(Icons.mark_email_read_outlined, color: context.scheme.onPrimaryContainer, size: 28),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text.rich(
+                title: 'Xác thực email',
+                subtitle: Text.rich(
                   TextSpan(
-                    text: 'Nhập mã gồm 6 chữ số đã được gửi tới ',
+                    text: 'Nhập mã 6 số vừa được gửi tới ',
                     children: [
                       TextSpan(
                         text: widget.email,
-                        style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                        style: TextStyle(fontWeight: FontWeight.w700, color: colors.textPrimary),
                       ),
                       const TextSpan(text: '. Mã có hiệu lực trong 10 phút.'),
                     ],
                   ),
-                  style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.4),
                 ),
-                const SizedBox(height: 32),
-
-                if (_errorMessage != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(color: Colors.red, fontSize: 13),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                const Text('Mã OTP', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _codeCtrl,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  autofocus: true,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 12),
-                  decoration: const InputDecoration(
-                    hintText: '••••••',
-                    counterText: '',
-                  ),
-                  validator: (v) => v == null || v.length != 6 ? 'Mã OTP phải gồm đúng 6 chữ số' : null,
-                  onFieldSubmitted: (_) => _submit(),
-                ),
-                const SizedBox(height: 32),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                          )
-                        : const Text('Xác thực', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Chưa nhận được mã? ', style: TextStyle(color: AppTheme.textSecondary)),
-                    _resendWait > 0
-                        ? Text(
-                            'Gửi lại sau ${_resendWait}s',
-                            style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
-                          )
-                        : GestureDetector(
-                            onTap: _resend,
-                            child: const Text(
-                              'Gửi lại mã',
-                              style: TextStyle(
-                                color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                  ],
-                ),
+              ),
+              if (_errorMessage != null) ...[
+                ErrorBanner(message: _errorMessage!),
+                const SizedBox(height: 16),
               ],
-            ),
+              _OtpInput(
+                controller: _codeCtrl,
+                focusNode: _focus,
+                length: _length,
+                hasError: _errorMessage != null,
+                enabled: !_submitting,
+                onCompleted: _submit,
+              ),
+              const SizedBox(height: 28),
+              SubmitButton(label: 'Xác thực', loading: _submitting, onPressed: _submit),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Chưa nhận được mã?', style: context.text.bodyMedium!.copyWith(color: colors.textSecondary)),
+                  TextButton(
+                    onPressed: _resendWait > 0 || _resending ? null : _resend,
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
+                    child: Text(_resendWait > 0 ? 'Gửi lại sau ${_resendWait}s' : 'Gửi lại mã'),
+                  ),
+                ],
+              ),
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
+                  child: const Text('Dùng email khác'),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 6 ô mã OTP. Một ô nhập ẩn phía trên nhận bàn phím, dán và tự điền mã từ hệ thống.
+class _OtpInput extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final int length;
+  final bool hasError;
+  final bool enabled;
+  final VoidCallback onCompleted;
+
+  const _OtpInput({
+    required this.controller,
+    required this.focusNode,
+    required this.length,
+    required this.hasError,
+    required this.enabled,
+    required this.onCompleted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final scheme = context.scheme;
+
+    return SizedBox(
+      height: 60,
+      child: Stack(
+        children: [
+          ListenableBuilder(
+            listenable: Listenable.merge([controller, focusNode]),
+            builder: (context, _) {
+              final text = controller.text;
+              return Row(
+                children: [
+                  for (var i = 0; i < length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: colors.field,
+                          borderRadius: BorderRadius.circular(AppTheme.radius),
+                          border: Border.all(
+                            width: 1.6,
+                            color: hasError
+                                ? scheme.error
+                                : focusNode.hasFocus && i == text.length.clamp(0, length - 1)
+                                    ? scheme.primary
+                                    : Colors.transparent,
+                          ),
+                        ),
+                        child: Text(
+                          i < text.length ? text[i] : '',
+                          style: context.text.headlineSmall,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                enabled: enabled,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                maxLength: length,
+                showCursor: false,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  counterText: '',
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                ),
+                onChanged: (v) {
+                  if (v.length == length) onCompleted();
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

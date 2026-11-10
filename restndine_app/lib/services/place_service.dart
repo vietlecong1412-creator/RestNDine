@@ -1,7 +1,19 @@
 import '../models/category_model.dart';
 import '../models/place_model.dart';
 import '../models/ai_summary_model.dart';
+import 'api_exception.dart';
 import 'api_service.dart';
+
+/// Kết quả bấm "Hữu ích" cho một bình luận.
+class HelpfulVoteResult {
+  final int? helpfulCount;
+  final bool alreadyVoted;
+  final String? error;
+
+  const HelpfulVoteResult({this.helpfulCount, this.alreadyVoted = false, this.error});
+
+  bool get success => helpfulCount != null;
+}
 
 class PlaceService {
   final ApiService _api = ApiService();
@@ -16,41 +28,33 @@ class PlaceService {
       }
       return [];
     } catch (_) {
+      // Thiếu danh mục thì vẫn xem được địa điểm, không chặn màn hình
       return [];
     }
   }
 
-  Future<List<PlaceModel>> getPlaces({String? search, List<int>? categoryIds}) async {
+  /// Toàn bộ địa điểm đã duyệt; tìm kiếm và lọc làm tại máy để phản hồi tức thì.
+  /// Ném [ApiException] khi lỗi để giao diện phân biệt "lỗi mạng" với "không có kết quả".
+  Future<List<PlaceModel>> getPlaces() async {
     try {
-      final Map<String, dynamic> queryParams = {};
-      if (search != null && search.isNotEmpty) {
-        queryParams['search'] = search;
-      }
-      if (categoryIds != null && categoryIds.isNotEmpty) {
-        queryParams['categoryIds'] = categoryIds;
-      }
-
-      final response = await _api.dio.get('/api/places', queryParameters: queryParams);
+      final response = await _api.dio.get('/api/places');
       if (response.data is List) {
         return (response.data as List)
             .map((e) => PlaceModel.fromJson(e as Map<String, dynamic>))
             .toList();
       }
-      return [];
+      throw const ApiException('Dữ liệu trả về không hợp lệ.');
     } catch (e) {
-      return [];
+      throw ApiException.from(e, fallback: 'Không tải được danh sách địa điểm.');
     }
   }
 
-  Future<PlaceModel?> getPlaceDetail(int id) async {
+  Future<PlaceModel> getPlaceDetail(int id) async {
     try {
       final response = await _api.dio.get('/api/places/$id');
-      if (response.statusCode == 200 && response.data != null) {
-        return PlaceModel.fromJson(response.data as Map<String, dynamic>);
-      }
-      return null;
-    } catch (_) {
-      return null;
+      return PlaceModel.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      throw ApiException.from(e, fallback: 'Không tải được thông tin địa điểm.');
     }
   }
 
@@ -69,7 +73,8 @@ class PlaceService {
     }
   }
 
-  Future<PlaceCommentModel?> addComment(int placeId, String content, int rating) async {
+  /// Ném [ApiException] kèm lý do khi server từ chối.
+  Future<PlaceCommentModel> addComment(int placeId, String content, int rating) async {
     try {
       final response = await _api.dio.post(
         '/api/places/$placeId/comments',
@@ -78,21 +83,23 @@ class PlaceService {
       if (response.data['success'] == true && response.data['comment'] != null) {
         return PlaceCommentModel.fromJson(response.data['comment']);
       }
-      return null;
-    } catch (_) {
-      return null;
+      throw ApiException(response.data['message'] ?? 'Không gửi được đánh giá.');
+    } catch (e) {
+      throw ApiException.from(e, fallback: 'Không gửi được đánh giá. Vui lòng thử lại.');
     }
   }
 
-  Future<int?> voteCommentHelpful(int commentId) async {
+  Future<HelpfulVoteResult> voteCommentHelpful(int commentId) async {
     try {
       final response = await _api.dio.post('/api/places/comments/$commentId/helpful');
       if (response.data['success'] == true) {
-        return response.data['helpfulCount'] as int?;
+        return HelpfulVoteResult(helpfulCount: response.data['helpfulCount'] as int?);
       }
-      return null;
-    } catch (_) {
-      return null;
+      return const HelpfulVoteResult(error: 'Không ghi nhận được bình chọn.');
+    } catch (e) {
+      final err = ApiException.from(e, fallback: 'Không ghi nhận được bình chọn.');
+      // Server trả 400 khi người dùng đã bình chọn bình luận này
+      return HelpfulVoteResult(alreadyVoted: err.statusCode == 400, error: err.message);
     }
   }
 }

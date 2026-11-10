@@ -1,9 +1,35 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:restndine_app/main.dart';
+import 'package:restndine_app/services/api_service.dart';
+
+/// Trả danh sách rỗng cho mọi API để test không gọi mạng thật.
+class _EmptyApi implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(RequestOptions o, Stream<Uint8List>? s, Future<void>? c) async =>
+      ResponseBody.fromString(jsonEncode([]), 200, headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      });
+
+  @override
+  void close({bool force = false}) {}
+}
 
 void main() {
-  testWidgets('App loads smoke test', (WidgetTester tester) async {
+  testWidgets('App khởi động với thanh điều hướng 3 tab', (WidgetTester tester) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    ApiService().dio.httpClientAdapter = _EmptyApi();
+
     await tester.pumpWidget(const RestNDineApp());
-    expect(find.byType(RestNDineApp), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Khám phá'), findsOneWidget);
+    expect(find.text('Bản đồ'), findsOneWidget);
+    expect(find.text('Tài khoản'), findsWidgets);
+    expect(find.text('Chưa có địa điểm nào'), findsOneWidget);
   });
 }

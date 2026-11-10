@@ -1,3 +1,5 @@
+import '../utils/formatters.dart';
+
 class UserModel {
   final String id;
   final String email;
@@ -13,6 +15,16 @@ class UserModel {
 
   bool get isOwner => roles.contains('Owner') || roles.contains('Admin');
   bool get isAdmin => roles.contains('Admin');
+
+  /// Tên ngắn để chào hỏi: userName mặc định là email nên chỉ lấy phần trước @.
+  String get displayName => displayNameFromEmail(userName.isNotEmpty ? userName : email);
+
+  /// Vai trò hiển thị bằng tiếng Việt, ưu tiên vai trò cao nhất.
+  String get roleLabel => roles.contains('Admin')
+      ? 'Quản trị viên'
+      : roles.contains('Owner')
+          ? 'Chủ quán'
+          : 'Khách hàng';
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(

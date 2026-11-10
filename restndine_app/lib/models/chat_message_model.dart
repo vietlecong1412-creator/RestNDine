@@ -1,3 +1,5 @@
+import '../utils/formatters.dart';
+
 class ChatMessageModel {
   final int id;
   final String senderId;
@@ -21,6 +23,14 @@ class ChatMessageModel {
     required this.placeId,
   });
 
+  /// API chat (cả REST lẫn SignalR) trả `sentAt` là giờ Việt Nam dạng "dd/MM/yyyy HH:mm";
+  /// vẫn đọc được ISO 8601 phòng khi server đổi định dạng.
+  static DateTime _parseSentAt(Object? raw) {
+    if (raw == null) return DateTime.now();
+    final s = raw.toString();
+    return parseVietnamDateTime(s) ?? parseServerDate(s) ?? DateTime.now();
+  }
+
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     return ChatMessageModel(
       id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
@@ -29,9 +39,7 @@ class ChatMessageModel {
       receiverId: json['receiverId'] ?? '',
       receiverEmail: json['receiverEmail'] ?? 'Chủ quán',
       content: json['content'] ?? '',
-      sentAt: json['sentAt'] != null
-          ? DateTime.tryParse(json['sentAt'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      sentAt: _parseSentAt(json['sentAt']),
       isRead: json['isRead'] ?? false,
       placeId: json['placeId'] is int ? json['placeId'] : 0,
     );

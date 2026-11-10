@@ -120,6 +120,8 @@ namespace DACS.Controllers
                 place.IsApproved,
                 place.StarRating,
                 place.Amenities,
+                place.OpeningHours,
+                place.Website,
                 place.OwnerId,
                 place.AiSummaryCache,
                 place.AiSummaryCacheUpdatedAt,
