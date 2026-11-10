@@ -31,6 +31,9 @@ class PlaceCommentModel {
   final String userId;
   final String userEmail;
 
+  /// Tên hiển thị do server tính (họ tên, hoặc phần trước @ của email).
+  final String? userName;
+
   PlaceCommentModel({
     required this.id,
     required this.content,
@@ -39,10 +42,12 @@ class PlaceCommentModel {
     required this.helpfulCount,
     required this.userId,
     required this.userEmail,
+    this.userName,
   });
 
-  /// Tên hiển thị: chỉ lấy phần trước @ để không lộ email của người khác.
-  String get authorName => displayNameFromEmail(userEmail);
+  /// Tên hiển thị: ưu tiên tên server trả về; server cũ chưa có thì lấy phần trước @ của email.
+  String get authorName =>
+      (userName != null && userName!.trim().isNotEmpty) ? userName!.trim() : displayNameFromEmail(userEmail);
 
   factory PlaceCommentModel.fromJson(Map<String, dynamic> json) {
     final rating = json['rating'] is int ? json['rating'] as int : int.tryParse('${json['rating']}') ?? 5;
@@ -54,6 +59,7 @@ class PlaceCommentModel {
       helpfulCount: json['helpfulCount'] is int ? json['helpfulCount'] : 0,
       userId: json['userId'] ?? '',
       userEmail: json['userEmail'] ?? 'Người dùng',
+      userName: json['userName'] as String?,
     );
   }
 }

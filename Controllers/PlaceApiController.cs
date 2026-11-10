@@ -147,7 +147,8 @@ namespace DACS.Controllers
                         c.CreatedAt,
                         c.HelpfulCount,
                         c.UserId,
-                        UserEmail = c.User != null ? c.User.Email : "Người dùng ẩn danh"
+                        UserEmail = c.User != null ? c.User.Email : "Người dùng ẩn danh",
+                        UserName = UserDisplay.Name(c.User, "Người dùng ẩn danh")
                     }).ToList()
             };
 
@@ -226,7 +227,8 @@ namespace DACS.Controllers
                     comment.CreatedAt,
                     comment.HelpfulCount,
                     comment.UserId,
-                    UserEmail = user?.Email ?? "Người dùng"
+                    UserEmail = user?.Email ?? "Người dùng",
+                    UserName = UserDisplay.Name(user)
                 }
             });
         }
