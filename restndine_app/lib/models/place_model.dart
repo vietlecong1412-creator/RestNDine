@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_config.dart';
 import '../config/app_theme.dart';
 import '../utils/formatters.dart';
 import 'category_model.dart';
@@ -72,7 +73,7 @@ class PlaceImageModel {
   factory PlaceImageModel.fromJson(Map<String, dynamic> json) {
     return PlaceImageModel(
       id: json['id'] is int ? json['id'] : 0,
-      imageUrl: json['imageUrl'] ?? '',
+      imageUrl: AppConfig.resolveUrl(json['imageUrl'] as String?) ?? '',
     );
   }
 }
@@ -286,7 +287,7 @@ class PlaceModel {
       latitude: json['latitude'] is num ? (json['latitude'] as num).toDouble() : 0.0,
       longitude: json['longitude'] is num ? (json['longitude'] as num).toDouble() : 0.0,
       description: str('description'),
-      imageUrl: str('imageUrl'),
+      imageUrl: AppConfig.resolveUrl(str('imageUrl')),
       phoneNumber: str('phoneNumber'),
       priceRange: str('priceRange'),
       bannerUrl: str('bannerUrl'),

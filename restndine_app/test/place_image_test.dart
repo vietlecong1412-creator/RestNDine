@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:restndine_app/config/app_config.dart';
 import 'package:restndine_app/config/app_theme.dart';
 import 'package:restndine_app/models/place_model.dart';
 import 'package:restndine_app/widgets/place_image.dart';
@@ -63,6 +64,33 @@ void main() {
     PlaceImage.markFailed(dead);
     expect(PlaceImage.isWorthTrying(dead), isFalse);
     expect(PlaceImage.isWorthTrying('https://example.com/khac.jpg'), isTrue);
+  });
+
+  test('ảnh lưu trên backend (đường dẫn tương đối) được đổi thành URL đầy đủ, link ngoài giữ nguyên', () {
+    final own = _place(1, 'cafe', imageUrl: '/images/places/gm-1-1.jpg');
+    expect(own.imageUrl, '${AppConfig.baseUrl}/images/places/gm-1-1.jpg');
+    expect(AppConfig.isOwnUrl(own.imageUrl!), isTrue);
+
+    const external = 'https://lh3.googleusercontent.com/proxy/abc=w800-h500-k-no';
+    expect(_place(2, 'cafe', imageUrl: external).imageUrl, external);
+    expect(AppConfig.isOwnUrl(external), isFalse);
+    expect(_place(3, 'cafe').imageUrl, isNull);
+
+    final withAlbum = PlaceModel.fromJson({
+      'id': 4,
+      'name': 'Quán 4',
+      'latitude': 10.77,
+      'longitude': 106.70,
+      'imageUrl': '/images/places/gm-4-1.jpg',
+      'images': [
+        {'id': 1, 'imageUrl': '/images/places/gm-4-2.jpg'},
+        {'id': 2, 'imageUrl': '/images/places/gm-4-1.jpg'},
+      ],
+    });
+    expect(withAlbum.galleryUrls, [
+      '${AppConfig.baseUrl}/images/places/gm-4-1.jpg',
+      '${AppConfig.baseUrl}/images/places/gm-4-2.jpg',
+    ]);
   });
 
   testWidgets('địa điểm không có ảnh: hiện ảnh minh hoạ, không gọi mạng', (tester) async {
