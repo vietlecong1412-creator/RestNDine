@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../config/app_config.dart';
 import '../config/app_theme.dart';
 import '../utils/formatters.dart';
 import 'category_model.dart';
@@ -227,15 +226,50 @@ class PlaceModel {
     return counts;
   }
 
-  /// Chuỗi đã bỏ dấu để tìm kiếm tại máy, tính một lần.
-  late final String searchText = foldVietnamese(
-    [name, address, description, ...categories.map((c) => c.name)].whereType<String>().join(' '),
-  );
+  // Các chuỗi đã bỏ dấu để tìm kiếm tại máy, tính một lần
+  late final String _searchName = foldVietnamese(name);
+  late final String _searchCategories = foldVietnamese(categories.map((c) => c.name).join(' '));
 
-  /// Ảnh minh hoạ theo loại, dùng khi không có ảnh hoặc link đã hết hạn.
-  /// Cùng quy tắc với PlaceFallbackImage.cs ở backend.
-  String get fallbackImageUrl =>
-      '${AppConfig.baseUrl}/images/fallback/${type.name}-${id % 4 + 1}.jpg';
+  /// Gần như mọi địa chỉ đều có "Thành phố …", nên bỏ cụm này để gõ "pho" không khớp cả nghìn nơi.
+  late final String _searchDetails = foldVietnamese(
+    [address, description].whereType<String>().join(' '),
+  ).replaceAll(RegExp(r'(?<![a-z0-9])thanh pho(?![a-z0-9])'), ' ');
+
+  /// Điểm khớp với các từ khoá đã bỏ dấu; 0 = không khớp. Điểm cao hiển thị trước: nguyên một từ
+  /// trong tên ("pho" ↔ "Phố Cổ") > đầu từ trong tên ("Phong") > nằm giữa tên > danh mục > địa chỉ/mô tả
+  /// (hai nhóm sau chỉ tính khớp đầu từ).
+  int searchScore(List<String> tokens) {
+    if (tokens.isEmpty) return 1;
+    var score = 0;
+    for (final t in tokens) {
+      if (containsWholeWord(_searchName, t)) {
+        score += 5;
+      } else if (containsWordPrefix(_searchName, t)) {
+        score += 4;
+      } else if (_searchName.contains(t)) {
+        score += 3;
+      } else if (containsWordPrefix(_searchCategories, t)) {
+        score += 2;
+      } else if (containsWordPrefix(_searchDetails, t)) {
+        score += 1;
+      } else {
+        return 0;
+      }
+    }
+    // Gõ đúng cụm trong tên (vd. "pho hoa") xếp trên các nơi chỉ khớp rời từng từ
+    if (tokens.length > 1 && _searchName.contains(tokens.join(' '))) score += 2;
+    return score;
+  }
+
+  /// Số ảnh minh hoạ cho mỗi loại địa điểm.
+  static const fallbackVariants = 4;
+
+  static String fallbackAssetFor(PlaceType type, int variant) => 'assets/fallback/${type.name}-$variant.jpg';
+
+  /// Ảnh minh hoạ theo loại, dùng khi không có ảnh hoặc link đã hết hạn. Đóng gói sẵn trong app
+  /// (assets/fallback là bản sao của wwwroot/images/fallback) nên hiện ngay, không cần mạng.
+  /// Cùng quy tắc chọn ảnh với PlaceFallbackImage.cs ở backend.
+  String get fallbackAsset => fallbackAssetFor(type, id % fallbackVariants + 1);
 
   factory PlaceModel.fromJson(Map<String, dynamic> json) {
     String? str(String key) {

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ai_summary_model.dart';
+import '../../../services/api_exception.dart';
 import '../../../services/place_service.dart';
 import '../../../utils/formatters.dart';
 import '../../../widgets/common.dart';
@@ -27,10 +30,16 @@ class AiSummaryCard extends StatefulWidget {
 class _AiSummaryCardState extends State<AiSummaryCard> {
   static const _collapsedHeight = 168.0;
 
+  /// Bản có sẵn trả về gần như ngay; quá mốc này là server đang chạy PhoBERT.
+  static const _slowAfter = Duration(seconds: 3);
+
   final PlaceService _placeService = PlaceService();
   AiSummaryModel? _summaryData;
   bool _isLoading = false;
+  bool _isSlow = false;
+  String? _error;
   bool _expanded = false;
+  Timer? _slowTimer;
 
   @override
   void initState() {
@@ -38,15 +47,37 @@ class _AiSummaryCardState extends State<AiSummaryCard> {
     _fetchSummary(forceRefresh: false);
   }
 
+  @override
+  void dispose() {
+    _slowTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _fetchSummary({bool forceRefresh = false}) async {
-    setState(() => _isLoading = true);
-    final data = await _placeService.getAiSummary(widget.placeId, forceRefresh: forceRefresh);
-    if (mounted) {
-      setState(() {
-        _summaryData = data;
-        _isLoading = false;
-      });
+    setState(() {
+      _isLoading = true;
+      _isSlow = false;
+      _error = null;
+    });
+    _slowTimer?.cancel();
+    _slowTimer = Timer(_slowAfter, () {
+      if (mounted && _isLoading) setState(() => _isSlow = true);
+    });
+
+    AiSummaryModel? data;
+    String? error;
+    try {
+      data = await _placeService.getAiSummary(widget.placeId, forceRefresh: forceRefresh);
+    } on ApiException catch (e) {
+      error = e.message;
     }
+    _slowTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      if (data != null) _summaryData = data;
+      _error = error;
+      _isLoading = false;
+    });
   }
 
   @override
@@ -101,7 +132,7 @@ class _AiSummaryCardState extends State<AiSummaryCard> {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: _isLoading ? _buildLoadingState() : _buildContent(context),
+              child: _isLoading ? _buildLoadingState(context) : _buildContent(context),
             ),
           ),
         ],
@@ -114,6 +145,31 @@ class _AiSummaryCardState extends State<AiSummaryCard> {
     final summary = (data != null && data.summary.trim().isNotEmpty)
         ? data.summary
         : widget.initialSummaryCache?.trim() ?? '';
+
+    // Lỗi mạng/quá hạn khác với "chưa có tóm tắt": cho thử lại thay vì báo thiếu đánh giá
+    if (summary.isEmpty && _error != null) {
+      return Column(
+        key: const ValueKey('error'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _error!,
+            style: context.text.bodyMedium!.copyWith(color: context.colors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => _fetchSummary(),
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Thử lại'),
+            style: TextButton.styleFrom(
+              foregroundColor: context.colors.ai,
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 36),
+            ),
+          ),
+        ],
+      );
+    }
 
     if (summary.isEmpty) {
       return Text(
@@ -260,25 +316,43 @@ class _AiSummaryCardState extends State<AiSummaryCard> {
               ),
           ],
         ),
+        // Phần chữ bên dưới do PhoBERT đọc nội dung các đánh giá gần nhất nên tỉ lệ có thể khác
+        const SizedBox(height: 6),
+        Text(
+          'Theo số sao của tất cả ${stats.total} đánh giá',
+          style: context.text.bodySmall!.copyWith(color: colors.textMuted, fontSize: 11.5),
+        ),
       ],
     );
   }
 
-  Widget _buildLoadingState() {
-    return const SkeletonPulse(
-      key: ValueKey('loading'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SkeletonBox(height: 10, radius: 99),
-          SizedBox(height: 16),
-          SkeletonBox(height: 12),
-          SizedBox(height: 8),
-          SkeletonBox(height: 12),
-          SizedBox(height: 8),
-          SkeletonBox(width: 180, height: 12),
+  Widget _buildLoadingState(BuildContext context) {
+    return Column(
+      key: const ValueKey('loading'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SkeletonPulse(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox(height: 10, radius: 99),
+              SizedBox(height: 16),
+              SkeletonBox(height: 12),
+              SizedBox(height: 8),
+              SkeletonBox(height: 12),
+              SizedBox(height: 8),
+              SkeletonBox(width: 180, height: 12),
+            ],
+          ),
+        ),
+        if (_isSlow) ...[
+          const SizedBox(height: 14),
+          Text(
+            'AI đang đọc và phân tích đánh giá của khách. Lần đầu có thể mất khoảng nửa phút…',
+            style: context.text.bodySmall!.copyWith(color: context.colors.textSecondary),
+          ),
         ],
-      ),
+      ],
     );
   }
 }

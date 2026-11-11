@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart' show LatLng;
 import '../models/category_model.dart';
 import '../models/place_model.dart';
 import '../services/api_exception.dart';
@@ -15,6 +16,8 @@ class PlaceProvider extends ChangeNotifier {
   final Set<int> _selectedCategoryIds = {};
   String _searchQuery = '';
   PlaceModel? _selectedPlace;
+  LatLng? _origin;
+  Map<int, double> _distances = const {};
   bool _isLoading = false;
   bool _hasLoaded = false;
   String? _error;
@@ -39,8 +42,45 @@ class PlaceProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isFiltering => _searchQuery.trim().isNotEmpty || _selectedCategoryIds.isNotEmpty;
 
+  /// Đã biết vị trí người dùng: danh sách xếp theo khoảng cách, thẻ hiện "cách bạn x km".
+  bool get hasUserLocation => _origin != null;
+
+  /// Khoảng cách (mét) từ vị trí người dùng tới [place]; null nếu chưa có vị trí hoặc địa điểm
+  /// thiếu toạ độ.
+  double? distanceTo(PlaceModel place) => _distances[place.id];
+
+  /// Đi xa hơn mức này so với lần sắp xếp trước mới sắp xếp lại: danh sách không nhảy thứ tự
+  /// liên tục khi người dùng vừa đi vừa xem.
+  static const resortDistance = 200.0;
+
   PlaceProvider({bool autoLoad = true}) {
     if (autoLoad) load();
+  }
+
+  /// Cập nhật vị trí người dùng (từ LocationProvider). Chỉ sắp xếp lại khi lần đầu có vị trí
+  /// hoặc đã đi xa hơn [resortDistance].
+  void setUserLocation(LatLng? position) {
+    final old = _origin;
+    if (position == null || old == null) {
+      if (position == old) return;
+    } else if (distanceMeters(old.latitude, old.longitude, position.latitude, position.longitude) <
+        resortDistance) {
+      return;
+    }
+    _origin = position;
+    _computeDistances();
+    _applyFilters();
+    notifyListeners();
+  }
+
+  void _computeDistances() {
+    final o = _origin;
+    _distances = o == null
+        ? const {}
+        : {
+            for (final p in _allPlaces)
+              if (p.hasValidLocation) p.id: distanceMeters(o.latitude, o.longitude, p.latitude, p.longitude),
+          };
   }
 
   Future<void> load() async {
@@ -60,6 +100,7 @@ class PlaceProvider extends ChangeNotifier {
       _categories = categories.isNotEmpty ? categories : _categoriesFromPlaces(_allPlaces);
       _featured = _allPlaces.where((p) => p.hasBanner).toList(growable: false);
       _hasLoaded = true;
+      _computeDistances();
       _applyFilters();
     } on ApiException catch (e) {
       _error = e.message;
@@ -117,13 +158,42 @@ class PlaceProvider extends ChangeNotifier {
   void _applyFilters() {
     final tokens = foldVietnamese(_searchQuery).split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
 
-    _places = _allPlaces.where((p) {
+    // (địa điểm, điểm khớp, vị trí gốc); vị trí gốc giữ thứ tự server (quảng bá, hạng sao) khi bằng điểm
+    // và chưa biết vị trí người dùng
+    final matches = <(PlaceModel, int, int)>[];
+    for (var i = 0; i < _allPlaces.length; i++) {
+      final p = _allPlaces[i];
       if (_selectedCategoryIds.isNotEmpty &&
           !p.categories.any((c) => _selectedCategoryIds.contains(c.id))) {
-        return false;
+        continue;
       }
-      return tokens.every(p.searchText.contains);
-    }).toList(growable: false);
+      final score = p.searchScore(tokens);
+      if (score > 0) matches.add((p, score, i));
+    }
+    // Đang tìm: khớp nhiều hơn đứng trước, bằng điểm thì quán gần hơn đứng trước.
+    // Không tìm: quán gần nhất trước (nơi thiếu toạ độ xuống cuối), giống trang web
+    final hasOrigin = _origin != null;
+    if (tokens.isNotEmpty || hasOrigin) {
+      int byDistance((PlaceModel, int, int) a, (PlaceModel, int, int) b) {
+        if (hasOrigin) {
+          final da = _distances[a.$1.id] ?? double.infinity;
+          final db = _distances[b.$1.id] ?? double.infinity;
+          if (da != db) return da.compareTo(db);
+        }
+        return a.$3.compareTo(b.$3);
+      }
+
+      matches.sort((a, b) => a.$2 != b.$2 ? b.$2.compareTo(a.$2) : byDistance(a, b));
+    }
+    _places = [for (final m in matches) m.$1];
+
+    // Dải "Nổi bật" cũng ưu tiên nơi gần bạn
+    final featured = _allPlaces.where((p) => p.hasBanner).toList();
+    if (hasOrigin) {
+      featured.sort((a, b) =>
+          (_distances[a.id] ?? double.infinity).compareTo(_distances[b.id] ?? double.infinity));
+    }
+    _featured = featured;
 
     // Địa điểm đang chọn trên bản đồ không còn trong kết quả thì bỏ chọn
     final selected = _selectedPlace;

@@ -12,6 +12,7 @@ import '../../utils/launcher.dart';
 import '../../widgets/common.dart';
 import '../auth/auth_flow.dart';
 import '../chat/chat_screen.dart';
+import '../map/directions.dart';
 import 'widgets/ai_summary_card.dart';
 import 'widgets/gallery.dart';
 import 'widgets/review_widgets.dart';
@@ -169,7 +170,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                 detailsLoaded: _place != null,
                 isOwner: isOwner,
                 onReviewsTap: _scrollToReviews,
-                onDirections: () => Launcher.directions(context, p),
+                onDirections: () => openDirections(context, p),
                 onCall: p.hasPhone ? () => Launcher.call(context, p.phoneNumber!) : null,
                 onWriteReview: () => _writeReview(p),
                 onShare: () => _copyLink(p),
@@ -188,7 +189,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
               SliverToBoxAdapter(
                 child: _Section(
                   title: 'Vị trí',
-                  child: LocationPreview(place: p, onOpen: () => Launcher.directions(context, p)),
+                  child: LocationPreview(place: p, onOpen: () => openDirections(context, p)),
                 ),
               ),
             SliverToBoxAdapter(
@@ -565,7 +566,7 @@ class _InfoSection extends StatelessWidget {
           value: place.address!,
           label: 'Địa chỉ · giữ để sao chép',
           actionIcon: Icons.directions_outlined,
-          onTap: () => Launcher.directions(context, place),
+          onTap: () => openDirections(context, place),
           onLongPress: () => Launcher.copy(context, place.address!, 'địa chỉ'),
         ),
       if (place.hasPhone)

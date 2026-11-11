@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/place_model.dart';
 import '../../../widgets/common.dart';
+import '../../../widgets/location_widgets.dart';
 import '../../../widgets/place_image.dart';
 import '../../place_detail/place_detail_screen.dart';
 
@@ -15,7 +16,10 @@ void openPlaceDetail(BuildContext context, PlaceModel place) {
 class PlaceCard extends StatelessWidget {
   final PlaceModel place;
 
-  const PlaceCard({super.key, required this.place});
+  /// Khoảng cách (mét) từ vị trí người dùng; null khi chưa bật vị trí.
+  final double? distance;
+
+  const PlaceCard({super.key, required this.place, this.distance});
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +47,8 @@ class PlaceCard extends StatelessWidget {
                   ),
                 ),
                 if (place.hasBanner) const Positioned(top: 12, left: 12, child: SponsoredBadge()),
+                if (distance != null)
+                  Positioned(top: 12, right: 12, child: DistanceBadge(meters: distance!)),
               ],
             ),
             Padding(
@@ -81,7 +87,10 @@ class FeaturedPlaceCard extends StatelessWidget {
   final PlaceModel place;
   final double width;
 
-  const FeaturedPlaceCard({super.key, required this.place, this.width = 272});
+  /// Khoảng cách (mét) từ vị trí người dùng; null khi chưa bật vị trí.
+  final double? distance;
+
+  const FeaturedPlaceCard({super.key, required this.place, this.width = 272, this.distance});
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +114,8 @@ class FeaturedPlaceCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (distance != null)
+                Positioned(top: 12, right: 12, child: DistanceBadge(meters: distance!)),
               Positioned(
                 left: 14,
                 right: 14,
