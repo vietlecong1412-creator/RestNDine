@@ -1,11 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../config/app_config.dart';
 import '../config/app_theme.dart';
 import '../models/place_model.dart';
 
-/// Ảnh địa điểm. Ảnh minh hoạ theo loại (đóng gói sẵn trong app) hiện ngay; ảnh thật trên mạng
-/// được tải ngầm và hiện đè lên nếu tải được. Link ảnh cào từ Google hay hết hạn (403) hoặc không
-/// tới được, nên không bao giờ bắt người dùng chờ chúng.
+/// Ảnh địa điểm. Không có ảnh thì dùng ảnh minh hoạ theo loại (đóng gói sẵn trong app, hiện ngay).
+/// Ảnh thật lưu trên backend được tải và lưu đệm như thường. Link ngoài (ảnh cào từ Google) hay
+/// hết hạn (403) hoặc không tới được, nên ảnh minh hoạ hiện trước và ảnh thật hiện đè lên nếu
+/// tải được: không bao giờ bắt người dùng chờ một link có thể đã chết.
 class PlaceImage extends StatelessWidget {
   final PlaceModel place;
 
@@ -85,13 +87,17 @@ class PlaceImage extends StatelessWidget {
         ? null
         : (displayWidth! * MediaQuery.devicePixelRatioOf(context)).round();
 
+    // Ảnh thật lưu trên backend của app thì chắc chắn có: chờ bằng nền trơn để không thấy ảnh
+    // minh hoạ đổi thành ảnh khác. Link ngoài hay hết hạn nên hiện ảnh minh hoạ trước.
+    final waiting = AppConfig.isOwnUrl(imageUrl) ? placeholder : fallback;
+
     return CachedNetworkImage(
       imageUrl: imageUrl,
       fit: fit,
       memCacheWidth: cacheWidth,
       fadeInDuration: const Duration(milliseconds: 220),
       fadeOutDuration: const Duration(milliseconds: 220),
-      placeholder: (_, __) => fallback,
+      placeholder: (_, __) => waiting,
       errorListener: (_) => markFailed(imageUrl),
       errorWidget: (_, __, ___) => fallback,
     );

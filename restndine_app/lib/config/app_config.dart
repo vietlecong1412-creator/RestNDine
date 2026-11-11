@@ -17,6 +17,17 @@ class AppConfig {
   }
 
   static String get apiBaseUrl => '$baseUrl/api';
+
+  /// Backend lưu ảnh tải lên dưới dạng đường dẫn tương đối ("/images/places/abc.jpg");
+  /// đổi thành URL đầy đủ để app tải được. Link ngoài (http...) giữ nguyên.
+  static String? resolveUrl(String? url) {
+    final u = url?.trim();
+    if (u == null || u.isEmpty) return null;
+    return u.startsWith('/') ? '$baseUrl$u' : u;
+  }
+
+  /// Ảnh do chính backend của app phục vụ (không phải link ngoài dễ hết hạn).
+  static bool isOwnUrl(String url) => url.startsWith('$baseUrl/');
   static String get chatHubUrl => '$baseUrl/chatHub';
 
   static const String appName = 'RestNDine';
