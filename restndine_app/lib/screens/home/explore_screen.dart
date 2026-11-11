@@ -8,6 +8,7 @@ import '../../models/place_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/place_provider.dart';
 import '../../widgets/common.dart';
+import '../../widgets/location_widgets.dart';
 import '../shell/main_shell.dart';
 import 'widgets/place_card.dart';
 import 'widgets/search_filter_bar.dart';
@@ -107,8 +108,11 @@ class ExploreScreen extends StatelessWidget {
     final showFeatured = !prov.isFiltering && prov.featuredPlaces.isNotEmpty;
     final List<PlaceModel> list =
         showFeatured ? prov.places.where((p) => !p.hasBanner).toList() : prov.places;
+    final nearby = prov.hasUserLocation;
 
     return [
+      // App gợi ý quán gần nhất: chưa có vị trí thì mời bật ngay trên đầu
+      if (!nearby) const SliverToBoxAdapter(child: NearbyPrompt()),
       if (showFeatured) ...[
         const SliverToBoxAdapter(
           child: SectionHeader(title: 'Nổi bật', subtitle: 'Địa điểm được đề xuất cho bạn'),
@@ -121,7 +125,10 @@ class ExploreScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: prov.featuredPlaces.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, i) => FeaturedPlaceCard(place: prov.featuredPlaces[i]),
+              itemBuilder: (_, i) {
+                final p = prov.featuredPlaces[i];
+                return FeaturedPlaceCard(place: p, distance: prov.distanceTo(p));
+              },
             ),
           ),
         ),
@@ -129,8 +136,10 @@ class ExploreScreen extends StatelessWidget {
       if (prov.isFiltering || list.isNotEmpty)
         SliverToBoxAdapter(
           child: SectionHeader(
-            title: prov.isFiltering ? 'Kết quả tìm kiếm' : 'Tất cả địa điểm',
-            subtitle: '${list.length} địa điểm',
+            title: prov.isFiltering
+                ? 'Kết quả tìm kiếm'
+                : (nearby ? 'Gần bạn nhất' : 'Tất cả địa điểm'),
+            subtitle: nearby ? '${list.length} địa điểm · gần nhất trước' : '${list.length} địa điểm',
             // Không có kết quả thì nút "Xóa bộ lọc" đã nằm trong trạng thái rỗng bên dưới
             trailing: prov.isFiltering && list.isNotEmpty
                 ? TextButton.icon(
@@ -159,7 +168,7 @@ class ExploreScreen extends StatelessWidget {
           sliver: SliverList.separated(
             itemCount: list.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (_, i) => PlaceCard(place: list[i]),
+            itemBuilder: (_, i) => PlaceCard(place: list[i], distance: prov.distanceTo(list[i])),
           ),
         ),
     ];

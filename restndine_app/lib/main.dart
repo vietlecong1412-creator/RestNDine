@@ -5,7 +5,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/location_provider.dart';
 import 'providers/place_provider.dart';
+import 'providers/route_provider.dart';
 import 'screens/shell/main_shell.dart';
 
 void main() {
@@ -26,8 +28,18 @@ class RestNDineApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => PlaceProvider()),
+        // Hỏi quyền/lấy vị trí khi khởi động: MainShell gọi LocationProvider.startup()
+        ChangeNotifierProvider(create: (_) => LocationProvider()),
+        ChangeNotifierProvider(create: (context) {
+          // Có vị trí thì danh sách xếp quán gần nhất lên đầu (sống cùng app nên không cần gỡ listener)
+          final location = context.read<LocationProvider>();
+          final places = PlaceProvider();
+          location.addListener(() => places.setUserLocation(location.position));
+          return places;
+        }),
         ChangeNotifierProvider(create: (_) => ShellController()),
+        // Chỉ đường ngay trong app (vẽ tuyến trên tab Bản đồ)
+        ChangeNotifierProvider(create: (_) => RouteProvider()),
       ],
       child: MaterialApp(
         title: 'RestNDine',

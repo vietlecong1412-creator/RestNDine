@@ -98,45 +98,54 @@ namespace DACS.Services
             var transactionNo = query["vnp_TransactionNo"].ToString();
             var now = DateTime.UtcNow;
 
-            await using var tx = await _context.Database.BeginTransactionAsync();
+            var proofUrl = $"vnpay:{txnRef}";
 
-            // Cập nhật có điều kiện: request song song hoặc URL dùng lại sẽ không khớp dòng nào
-            var claimed = await _context.BannerPayments
-                .Where(p => p.Id == payment.Id && p.Status == BannerPaymentStatus.Pending)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(p => p.Status, newStatus)
-                    .SetProperty(p => p.ResponseCode, responseCode)
-                    .SetProperty(p => p.VnpTransactionNo, transactionNo)
-                    .SetProperty(p => p.ProcessedAt, now));
-            if (claimed == 0)
+            // Chỉ phần ghi DB nằm trong khối retry; xoá file ảnh để sau khi commit để không chạy lặp
+            var strategy = _context.Database.CreateExecutionStrategy();
+            var (claimed, applied, currentStatus) = await strategy.ExecuteAsync(async () =>
             {
-                var currentStatus = await _context.BannerPayments.AsNoTracking()
-                    .Where(p => p.Id == payment.Id)
-                    .Select(p => p.Status)
-                    .FirstAsync();
+                await using var tx = await _context.Database.BeginTransactionAsync();
+
+                // Cập nhật có điều kiện: request song song hoặc URL dùng lại sẽ không khớp dòng nào
+                var claimedRows = await _context.BannerPayments
+                    .Where(p => p.Id == payment.Id && p.Status == BannerPaymentStatus.Pending)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(p => p.Status, newStatus)
+                        .SetProperty(p => p.ResponseCode, responseCode)
+                        .SetProperty(p => p.VnpTransactionNo, transactionNo)
+                        .SetProperty(p => p.ProcessedAt, now));
+                if (claimedRows == 0)
+                {
+                    var status = await _context.BannerPayments.AsNoTracking()
+                        .Where(p => p.Id == payment.Id)
+                        .Select(p => p.Status)
+                        .FirstAsync();
+                    return (false, false, (BannerPaymentStatus?)status);
+                }
+
+                // Chỉ áp dụng khi Place vẫn được phép đặt banner (có thể đã có giao dịch khác áp dụng trước)
+                var appliedRows = !success ? 0 : await _context.Places
+                    .Where(p => p.Id == payment.PlaceId
+                        && (p.BannerStatus == BannerStatus.None || p.BannerStatus == BannerStatus.Rejected))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(p => p.BannerUrl, payment.PendingBannerUrl)
+                        .SetProperty(p => p.PaymentProofUrl, proofUrl)
+                        .SetProperty(p => p.BannerStatus, BannerStatus.PendingPayment));
+
+                await tx.CommitAsync();
+                return (true, appliedRows > 0, (BannerPaymentStatus?)null);
+            });
+
+            if (!claimed)
                 return new BannerPaymentResult(BannerPaymentOutcome.AlreadyProcessed, payment.PlaceId, placeName, responseCode, currentStatus);
-            }
 
             if (!success)
             {
-                await tx.CommitAsync();
                 ImageUpload.TryDelete(payment.PendingBannerUrl);
                 return new BannerPaymentResult(BannerPaymentOutcome.Failed, payment.PlaceId, placeName, responseCode);
             }
 
-            // Chỉ áp dụng khi Place vẫn được phép đặt banner (có thể đã có giao dịch khác áp dụng trước)
-            var proofUrl = $"vnpay:{txnRef}";
-            var applied = await _context.Places
-                .Where(p => p.Id == payment.PlaceId
-                    && (p.BannerStatus == BannerStatus.None || p.BannerStatus == BannerStatus.Rejected))
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(p => p.BannerUrl, payment.PendingBannerUrl)
-                    .SetProperty(p => p.PaymentProofUrl, proofUrl)
-                    .SetProperty(p => p.BannerStatus, BannerStatus.PendingPayment));
-
-            await tx.CommitAsync();
-
-            if (applied == 0)
+            if (!applied)
             {
                 // Tiền đã nhận nhưng Place đã có banner khác: giữ giao dịch và ảnh để Admin xử lý
                 _logger.LogError("Giao dịch {TxnRef} đã thanh toán nhưng Place {PlaceId} không còn ở trạng thái đặt banner.",

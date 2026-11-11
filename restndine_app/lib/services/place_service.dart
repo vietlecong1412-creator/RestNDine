@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show Options;
 import '../models/category_model.dart';
 import '../models/place_model.dart';
 import '../models/ai_summary_model.dart';
@@ -58,18 +59,21 @@ class PlaceService {
     }
   }
 
-  Future<AiSummaryModel?> getAiSummary(int id, {bool forceRefresh = false}) async {
+  /// Server chạy PhoBERT khi chưa có bản tóm tắt (giới hạn 120 giây, AiSummary:TimeoutSeconds),
+  /// nên chờ lâu hơn hẳn mức mặc định 25 giây của các API khác.
+  static const aiSummaryTimeout = Duration(seconds: 150);
+
+  /// Ném [ApiException] khi lỗi để màn hình phân biệt được "lỗi tải" với "chưa có tóm tắt".
+  Future<AiSummaryModel> getAiSummary(int id, {bool forceRefresh = false}) async {
     try {
       final response = await _api.dio.get(
         '/api/places/$id/ai-summary',
         queryParameters: {'forceRefresh': forceRefresh},
+        options: Options(receiveTimeout: aiSummaryTimeout),
       );
-      if (response.data != null) {
-        return AiSummaryModel.fromJson(response.data as Map<String, dynamic>);
-      }
-      return null;
-    } catch (_) {
-      return null;
+      return AiSummaryModel.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      throw ApiException.from(e, fallback: 'Không tải được tóm tắt AI.');
     }
   }
 

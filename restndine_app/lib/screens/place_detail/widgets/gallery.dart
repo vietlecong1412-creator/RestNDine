@@ -100,6 +100,23 @@ class _PhotoViewerState extends State<_PhotoViewer> {
     super.dispose();
   }
 
+  /// Link đã biết là hỏng (ảnh đầu trang vừa thử) thì hiện luôn ảnh minh hoạ, không quay vòng chờ.
+  Widget _photo(String url) {
+    final fallback = Image.asset(
+      widget.place.fallbackAsset,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48),
+    );
+    if (!PlaceImage.isWorthTrying(url)) return fallback;
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.contain,
+      placeholder: (_, __) => const CircularProgressIndicator(color: Colors.white54),
+      errorListener: (_) => PlaceImage.markFailed(url),
+      errorWidget: (_, __, ___) => fallback,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,19 +129,7 @@ class _PhotoViewerState extends State<_PhotoViewer> {
             onPageChanged: (i) => setState(() => _index = i),
             itemBuilder: (_, i) => InteractiveViewer(
               maxScale: 4,
-              child: Center(
-                child: CachedNetworkImage(
-                  imageUrl: widget.urls[i],
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) => const CircularProgressIndicator(color: Colors.white54),
-                  errorWidget: (_, __, ___) => CachedNetworkImage(
-                    imageUrl: widget.place.fallbackImageUrl,
-                    fit: BoxFit.contain,
-                    errorWidget: (_, __, ___) =>
-                        const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48),
-                  ),
-                ),
-              ),
+              child: Center(child: _photo(widget.urls[i])),
             ),
           ),
           SafeArea(

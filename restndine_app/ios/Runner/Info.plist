@@ -6,6 +6,8 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>RestNDine dùng vị trí của bạn để hiển thị quán ăn, cà phê và khách sạn ở gần trên bản đồ.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Restndine App</string>
 	<key>CFBundleExecutable</key>

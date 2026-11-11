@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../models/place_model.dart';
 
-/// Ảnh địa điểm; không có ảnh hoặc link hết hạn thì dùng ảnh minh hoạ theo loại.
+/// Ảnh địa điểm. Ảnh minh hoạ theo loại (đóng gói sẵn trong app) hiện ngay; ảnh thật trên mạng
+/// được tải ngầm và hiện đè lên nếu tải được. Link ảnh cào từ Google hay hết hạn (403) hoặc không
+/// tới được, nên không bao giờ bắt người dùng chờ chúng.
 class PlaceImage extends StatelessWidget {
   final PlaceModel place;
 
@@ -22,12 +24,45 @@ class PlaceImage extends StatelessWidget {
     this.displayWidth,
   });
 
-  /// Cho phép test thay ảnh mạng bằng ảnh cục bộ.
+  /// Cho phép test thay ảnh bằng ảnh cục bộ.
   @visibleForTesting
   static Widget Function(String url, BoxFit fit)? debugImageBuilder;
 
+  /// Link vừa tải lỗi → thời điểm lỗi. Trong [retryAfter] không tải lại mà dùng luôn ảnh minh hoạ,
+  /// để mỗi lần mở lại địa điểm không phải gọi mạng vô ích.
+  static final _failedAt = <String, DateTime>{};
+  static const retryAfter = Duration(minutes: 5);
+
+  /// Link có đáng thử tải không: có link, và chưa lỗi (hoặc lỗi đã lâu, có thể chỉ do mất mạng).
+  static bool isWorthTrying(String? url) {
+    if (url == null || url.trim().isEmpty) return false;
+    final at = _failedAt[url];
+    return at == null || DateTime.now().difference(at) > retryAfter;
+  }
+
+  static void markFailed(String url) => _failedAt[url] = DateTime.now();
+
+  @visibleForTesting
+  static void debugResetFailures() => _failedAt.clear();
+
+  /// Giải mã sẵn các ảnh minh hoạ lúc mở app, để lần hiện đầu tiên cũng không trễ khung hình nào.
+  static void precacheFallbacks(BuildContext context) {
+    if (debugImageBuilder != null) return;
+    for (final type in PlaceType.values) {
+      for (var i = 1; i <= PlaceModel.fallbackVariants; i++) {
+        precacheImage(AssetImage(PlaceModel.fallbackAssetFor(type, i)), context);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final imageUrl = url ?? place.imageUrl;
+    final hasUrl = imageUrl != null && imageUrl.trim().isNotEmpty;
+
+    final debug = debugImageBuilder;
+    if (debug != null) return debug(hasUrl ? imageUrl : place.fallbackAsset, fit);
+
     final colors = context.colors;
     final placeholder = ColoredBox(
       color: colors.skeleton,
@@ -36,26 +71,29 @@ class PlaceImage extends StatelessWidget {
       ),
     );
 
+    // Không giới hạn cỡ giải mã: cả app chỉ có 12 ảnh minh hoạ dùng chung cho mọi kích thước
+    final fallback = Image.asset(
+      place.fallbackAsset,
+      fit: fit,
+      // Chỉ thấy nền chờ nếu ảnh chưa kịp giải mã sẵn (vài khung hình đầu sau khi mở app)
+      frameBuilder: (_, child, frame, sync) => sync || frame != null ? child : placeholder,
+      errorBuilder: (_, __, ___) => placeholder,
+    );
+    if (!hasUrl || !isWorthTrying(imageUrl)) return fallback;
+
     final cacheWidth = displayWidth == null
         ? null
         : (displayWidth! * MediaQuery.devicePixelRatioOf(context)).round();
 
-    Widget network(String imageUrl, Widget Function() onError) {
-      final debug = debugImageBuilder;
-      if (debug != null) return debug(imageUrl, fit);
-      return CachedNetworkImage(
-        imageUrl: imageUrl,
-        fit: fit,
-        memCacheWidth: cacheWidth,
-        fadeInDuration: const Duration(milliseconds: 220),
-        placeholder: (_, __) => placeholder,
-        errorWidget: (_, __, ___) => onError(),
-      );
-    }
-
-    final fallback = network(place.fallbackImageUrl, () => placeholder);
-    final imageUrl = url ?? place.imageUrl;
-    if (imageUrl == null || imageUrl.isEmpty) return fallback;
-    return network(imageUrl, () => fallback);
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: fit,
+      memCacheWidth: cacheWidth,
+      fadeInDuration: const Duration(milliseconds: 220),
+      fadeOutDuration: const Duration(milliseconds: 220),
+      placeholder: (_, __) => fallback,
+      errorListener: (_) => markFailed(imageUrl),
+      errorWidget: (_, __, ___) => fallback,
+    );
   }
 }

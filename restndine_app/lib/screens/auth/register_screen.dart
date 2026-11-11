@@ -26,6 +26,8 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  // Sau lần gửi lỗi đầu tiên thì kiểm tra lại ngay khi người dùng sửa, để lỗi cũ không đứng mãi
+  AutovalidateMode _autovalidate = AutovalidateMode.disabled;
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
@@ -51,7 +53,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      setState(() => _autovalidate = AutovalidateMode.onUserInteraction);
+      return;
+    }
 
     final auth = context.read<AuthProvider>();
     final success = await auth.register(_emailCtrl.text.trim(), _passCtrl.text, role: _selectedRole);
@@ -79,6 +84,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: AutofillGroup(
             child: Form(
               key: _formKey,
+              autovalidateMode: _autovalidate,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

@@ -23,6 +23,8 @@ import 'package:restndine_app/config/app_theme.dart';
 import 'package:restndine_app/config/map_tiles.dart';
 import 'package:restndine_app/models/place_model.dart';
 import 'package:restndine_app/providers/auth_provider.dart';
+import 'package:restndine_app/providers/location_provider.dart';
+import 'package:restndine_app/providers/route_provider.dart';
 import 'package:restndine_app/providers/place_provider.dart';
 import 'package:restndine_app/screens/auth/login_screen.dart';
 import 'package:restndine_app/screens/auth/otp_screen.dart';
@@ -181,7 +183,8 @@ Future<_Env> _setup(WidgetTester tester, {bool loggedIn = false, bool loadPlaces
     if (loggedIn) await auth.checkCurrentUser();
     if (loadPlaces) await places.load();
   });
-  return _Env(auth, places, ShellController());
+  // App mở vào tab Bản đồ; ảnh nào cần tab khác thì tự chuyển, mặc định của bộ ảnh là Khám phá
+  return _Env(auth, places, ShellController()..go(ShellController.explore));
 }
 
 Future<void> _pumpApp(WidgetTester tester, _Env env, Widget home, {bool dark = false}) async {
@@ -193,6 +196,8 @@ Future<void> _pumpApp(WidgetTester tester, _Env env, Widget home, {bool dark = f
           ChangeNotifierProvider.value(value: env.auth),
           ChangeNotifierProvider.value(value: env.places),
           ChangeNotifierProvider.value(value: env.shell),
+          ChangeNotifierProvider(create: (_) => LocationProvider()),
+          ChangeNotifierProvider(create: (_) => RouteProvider()),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,

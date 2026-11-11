@@ -8,15 +8,24 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 
 // Trên Windows, log ghi ra file sẽ mất dấu tiếng Việt nếu giữ bảng mã mặc định của hệ thống
 Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Supabase pooler cắt các kết nối để rảnh, Npgsql lại lấy đúng kết nối đã chết đó cho request sau (lỗi 500).
+// Ping định kỳ + bỏ sớm kết nối rảnh để hạn chế, còn lọt thì EF tự thử lại trên kết nối mới.
+var dbConnection = new NpgsqlConnectionStringBuilder(builder.Configuration.GetConnectionString("DefaultConnection"));
+if (dbConnection.KeepAlive == 0) dbConnection.KeepAlive = 30;
+if (dbConnection.ConnectionIdleLifetime == 300) dbConnection.ConnectionIdleLifetime = 60;
+
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(dbConnection.ConnectionString, npgsql =>
+        // Có retry thì transaction tự mở phải chạy trong CreateExecutionStrategy().ExecuteAsync
+        npgsql.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null)));
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {

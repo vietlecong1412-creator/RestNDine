@@ -128,4 +128,12 @@ void main() {
       );
     });
   });
+
+  test('khoảng cách: mét làm tròn 10, km dùng dấu phẩy', () {
+    expect(formatDistance(347), '350 m');
+    expect(formatDistance(1234), '1,2 km');
+    expect(formatDistance(15400), '15 km');
+    // Chợ Bến Thành → Nhà thờ Đức Bà: khoảng 820 m đường chim bay
+    expect(distanceMeters(10.7725, 106.6980, 10.7798, 106.6990), closeTo(820, 40));
+  });
 }
