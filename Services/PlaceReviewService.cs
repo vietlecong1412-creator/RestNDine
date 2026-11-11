@@ -106,33 +106,41 @@ namespace DACS.Services
             if (await _context.CommentHelpfulVotes.AnyAsync(v => v.CommentId == commentId && v.UserId == userId))
                 return new HelpfulVoteResult(HelpfulVoteStatus.AlreadyVoted);
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
-            var vote = new CommentHelpfulVote { CommentId = commentId, UserId = userId, VotedAt = DateTime.UtcNow };
-            _context.CommentHelpfulVotes.Add(vote);
-            try
+            // Retry chạy lại cả khối, nên phiếu của lần thử trước phải được gỡ khỏi change tracker
+            CommentHelpfulVote? vote = null;
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-            {
-                // Hai request cùng lúc đều qua bước kiểm tra trên; khóa chính (CommentId, UserId) chặn request sau
-                _context.Entry(vote).State = EntityState.Detached;
-                return new HelpfulVoteResult(HelpfulVoteStatus.AlreadyVoted);
-            }
+                if (vote != null) _context.Entry(vote).State = EntityState.Detached;
 
-            // Tăng bằng SQL để các vote đồng thời của nhiều người không ghi đè nhau
-            await _context.PlaceComments
-                .Where(c => c.Id == commentId)
-                .ExecuteUpdateAsync(s => s.SetProperty(c => c.HelpfulCount, c => c.HelpfulCount + 1));
+                await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            var helpfulCount = await _context.PlaceComments
-                .Where(c => c.Id == commentId)
-                .Select(c => c.HelpfulCount)
-                .FirstAsync();
+                vote = new CommentHelpfulVote { CommentId = commentId, UserId = userId, VotedAt = DateTime.UtcNow };
+                _context.CommentHelpfulVotes.Add(vote);
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+                {
+                    // Hai request cùng lúc đều qua bước kiểm tra trên; khóa chính (CommentId, UserId) chặn request sau
+                    _context.Entry(vote).State = EntityState.Detached;
+                    return new HelpfulVoteResult(HelpfulVoteStatus.AlreadyVoted);
+                }
 
-            await transaction.CommitAsync();
-            return new HelpfulVoteResult(HelpfulVoteStatus.Success, helpfulCount);
+                // Tăng bằng SQL để các vote đồng thời của nhiều người không ghi đè nhau
+                await _context.PlaceComments
+                    .Where(c => c.Id == commentId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.HelpfulCount, c => c.HelpfulCount + 1));
+
+                var helpfulCount = await _context.PlaceComments
+                    .Where(c => c.Id == commentId)
+                    .Select(c => c.HelpfulCount)
+                    .FirstAsync();
+
+                await transaction.CommitAsync();
+                return new HelpfulVoteResult(HelpfulVoteStatus.Success, helpfulCount);
+            });
         }
     }
 }
